@@ -1,0 +1,107 @@
+---
+title: "MovieLens report"
+author: "Nina Caparros"
+date: "17/10/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Initialisation, include=FALSE}
+#------------------------------------------------------------------------
+#This part of the code was provided in the assessment, by HarvardX
+
+if(!require(tidyverse)) install.packages("tidyverse", repos = "http://cran.us.r-project.org")
+if(!require(caret)) install.packages("caret", repos = "http://cran.us.r-project.org")
+if(!require(data.table)) install.packages("data.table", repos = "http://cran.us.r-project.org")
+
+dl <- tempfile()
+download.file("http://files.grouplens.org/datasets/movielens/ml-10m.zip", dl)
+
+ratings <- fread(text = gsub("::", "\t", readLines(unzip(dl, "ml-10M100K/ratings.dat"))),
+                 col.names = c("userId", "movieId", "rating", "timestamp"))
+
+movies <- str_split_fixed(readLines(unzip(dl, "ml-10M100K/movies.dat")), "\\::", 3)
+colnames(movies) <- c("movieId", "title", "genres")
+movies <- as.data.frame(movies) %>% mutate(movieId = as.numeric(levels(movieId))[movieId],
+                                           title = as.character(title),
+                                           genres = as.character(genres))
+
+movielens <- left_join(ratings, movies, by = "movieId")
+
+# Validation set will be 10% of MovieLens data
+
+set.seed(1, sample.kind="Rounding")
+# if using R 3.5 or earlier, use `set.seed(1)` instead
+test_index <- createDataPartition(y = movielens$rating, times = 1, p = 0.1, list = FALSE)
+edx <- movielens[-test_index,]
+temp <- movielens[test_index,]
+
+# Make sure userId and movieId in validation set are also in edx set
+
+validation <- temp %>% 
+  semi_join(edx, by = "movieId") %>%
+  semi_join(edx, by = "userId")
+
+# Add rows removed from validation set back into edx set
+
+removed <- anti_join(temp, validation)
+edx <- rbind(edx, removed)
+
+rm(dl, ratings, movies, test_index, temp, movielens, removed)
+
+```
+
+## Introduction
+
+The following report is the analysis and results of the MovieLens Assessment of the Data Science Program of HarvardX, available on Edx (https://https://courses.edx.org/courses/course-v1:HarvardX+PH125.9x+2T2019/course/).
+
+```{r Counts include=FALSE}
+#Number of rows and columns of the dataset provided by the edx dataset
+nrows <- nrow(edx)
+ncols <-ncol(edx)
+
+#Number of distinct movies and users
+number_of_movies <- edx %>% group_by(movieId) %>% summarize() %>% nrow()
+number_of_users <- edx %>% group_by(userId) %>% summarize() %>% nrow()
+
+```
+
+## Overview
+
+The purpose of this report was to develop a movie recommendation system using a subset of the MovieLens dataset. MovieLenses datasets are available on grouplens.org and several sizes are at one's disposal. As required in the assessment, one was using the MovieLens 10M Dataset, which provides roughly ten millions (`nrows`) of movie rating. The initialization of the dataset was provided at the begining of the assessment by HarvardX.
+
+The dataset initialized was made up of six columns as follow :
+
+* userId : the identifier of the user relative of the rating in the row (`class(edx$userId)`)
+* movieId : the identifier of the movie rated in the row (numeric)
+* rating : the rating given by the user, which can take values from 0 to 5, as whole star ratings (0 to 5) and half star ratings (0.5 to 4.5) (numeric)
+* timestamp : the date and time as a timestamp at which the user left it's rating (numeric)
+* title : the title and year of release of the movie rated (character)
+* genres : the genre or genres of the movie rated (character)
+
+The dataset provides information for `number_of_movies` different movies and `number_of_users` distinct users.
+
+
+## Executive summary 
+
+section that describes the dataset and summarizes the goal of the project and key steps that were performed
+## Methods/analysis section that explains the process and techniques used, such as data cleaning, data exploration and visualization, any insights gained, and your modeling approach
+## Results section that presents the modeling results and discusses the model performance
+
+## Conclusion s
+```{r Report}
+#top10_genres_by_nrating
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
