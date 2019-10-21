@@ -554,13 +554,15 @@ functionRmses <- function(lambda){
 
 rmsesRough <- sapply(lambdasRough, functionRmses)
 
-qplot(lambdas,rmses)
+qplot(lambdasRough,rmsesRough)
 
-lambdaFine= seq(lambdas[which.min(rmses)] -1, lambdas[which.min(rmses)] + 1, 0.25)
+lambdaFine= seq(lambdasRough[which.min(rmsesRough)] -1, lambdasRough[which.min(rmsesRough)] + 1, 0.25)
 
-rmses <- sapply(lambdasFine, functionRmses)
+rmsesFine <- sapply(lambdasFine, functionRmses)
 
-mu <- mean(train_edx$rating)
+mu <- mean(edx$rating)
+
+lambda = lambdaFine[which.min(rmsesFine)]
 
 #movie effect
 b_i <- train_edx %>% 
