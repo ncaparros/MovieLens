@@ -63,7 +63,7 @@ rm(dl, ratings, movies, test_index, temp, movielens, removed)
 
 ## Introduction
 
-The following report is the analysis and results of the MovieLens Assessment of the Data Science Program of HarvardX, available on Edx (https://https://courses.edx.org/courses/course-v1:HarvardX+PH125.9x+2T2019/course/). The goal was to predict the ratings of some movies contained in the validation dataset, based on the information of the training dataset. 
+The following report is the analysis and results of the MovieLens Assessment of the Data Science Program of HarvardX, available on Edx (https://https://courses.edx.org/courses/course-v1:HarvardX+PH125.9x+2T2019/course/). The purpose of this project was to develop a movie recommendation system using a subset of the MovieLens dataset. MovieLenses datasets are available on grouplens.org and several sizes are at one's disposal. As required in the assessment, one was using the MovieLens 10M Dataset, which provides roughly ten millions (`r nrows`) of movie ratings. The initialization of the dataset was provided at the begining of the assessment by HarvardX.
 
 ```{r Counts, include=FALSE}
 #Number of rows and columns of the dataset provided by the edx dataset
@@ -76,9 +76,6 @@ number_of_users <- edx %>% group_by(userId) %>% summarize() %>% nrow()
 
 ```
 
-## Overview
-
-The purpose of this report was to develop a movie recommendation system using a subset of the MovieLens dataset. MovieLenses datasets are available on grouplens.org and several sizes are at one's disposal. As required in the assessment, one was using the MovieLens 10M Dataset, which provides roughly ten millions (`r nrows`) of movie ratings. The initialization of the dataset was provided at the begining of the assessment by HarvardX.
 
 The dataset initialized was made up of six columns as follow :
 

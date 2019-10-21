@@ -148,6 +148,9 @@ if(!require(ggpubr)) install.packages("ggpubr", repos = "http://cran.us.r-projec
 # Display whole integers, not scientific notation
 options("scipen"=100)
 
+#----------------------------------------------------------------------------------------------------------------
+#Is there a correlation between the number of ratings for a movie and the value of the rating ?
+
 # Movie ratings analysis : top 10 reviewed movies
 dataByMovie <- edx %>% 
   group_by(movieId) %>% 
@@ -163,6 +166,7 @@ completeDataByMovie <- left_join(edx %>%
 #Initialize the plot
 plotByMovie <- ggplot()
 
+#Bar chart of the 10 most rated movies (x) versus the number of ratings for each movie (y)
 rating_by_movie <- plotByMovie  + 
   geom_bar(data= complete_data %>%
              group_by(movieId),
@@ -174,6 +178,7 @@ rating_by_movie <- plotByMovie  +
   xlab("Movies (top 10 rated)") + 
   coord_cartesian(xlim =c(1, 10))
 
+#Boxplot of the ratings for the 10 most rated movies
 avg_rating_by_movie <- plotByMovie + 
   geom_boxplot(
     data=completeDataByMovie
@@ -186,20 +191,29 @@ avg_rating_by_movie <- plotByMovie +
   xlab("Movies (top 10 rated)") + 
   coord_cartesian(xlim =c(1, 10))
 
+#Ploting the barchart and the boxplot side by side
 ggarrange(rating_by_movie,avg_rating_by_movie)
 
-dataU <- edx %>% 
+#----------------------------------------------------------------------------------------------------------------
+#Is there a correlation between the number of ratings by user and the value of the rating ?
+
+#User ratings analysis : 10 most raters
+dataByUser <- edx %>% 
   group_by(userId) %>% 
   summarize(n=n()) %>%
   top_n(10,n)
 
-complete_data <- left_join(edx %>% 
-                             filter(userId %in% dataU$userId),
-                           dataU, 
+#Add total ratings count to the top 10 raters
+completeDataByUser <- left_join(edx %>% 
+                             filter(userId %in% dataByUser$userId),
+                           dataByUser, 
                            by="userId")
-plot_user <- ggplot()
 
-rating_by_user <- plot_user  + 
+#Initialize the plot
+userPlot <- ggplot()
+
+
+userRatingsBarPlot <- userPlot  + 
   geom_bar(data=
              complete_data %>% group_by(userId),
            aes(x = reorder(userId,-n),
@@ -210,7 +224,7 @@ rating_by_user <- plot_user  +
   xlab("Users (top 10 raters)") + 
   coord_cartesian(xlim =c(1, 10))
 
-avg_rating_by_user <- plot_user + 
+UserAvgRatingBoxplot <- userPlot + 
   geom_boxplot(data=complete_data
     ,aes(x=reorder(userId,-n),
          y=rating)) +
@@ -219,21 +233,25 @@ avg_rating_by_user <- plot_user +
   xlab("Users (top 10 raters)") + 
   coord_cartesian(xlim =c(1, 10))
 
-ggarrange(rating_by_user,avg_rating_by_user)
+ggarrange(userRatingsBarPlot,UserAvgRatingBoxplot)
 
-dataG <- edx %>% 
+#----------------------------------------------------------------------------------------------------------------
+#Is there a correlation between the number of ratings by user and the value of the rating ?
+
+
+dataByGenre <- edx %>% 
   group_by(genres) %>% 
   summarize(n=n()) %>%
   top_n(10,n)
 
-complete_data <- left_join(edx %>% 
-                             filter(genres %in% dataG$genres),
-                           dataG, 
+completeDataByGenre <- left_join(edx %>% 
+                             filter(genres %in% dataByGenre$genres),
+                           dataByGenre, 
                            by="genres")
-plot_genre <- ggplot()
+genrePlot <- ggplot()
 
-rating_by_genre <- plot_genre  + 
-  geom_bar(data=dataG,
+genreRatingsBarPlot <- genrePlot  + 
+  geom_bar(data=dataByGenre,
            aes(x=reorder(genres,-n), 
                y=n),
            stat="identity") +
@@ -242,9 +260,9 @@ rating_by_genre <- plot_genre  +
   xlab("Genres (top 10 rated)") + 
   coord_cartesian(xlim =c(1, 10))
 
-avg_rating_by_genre <- plot_genre + 
+UserAvgRatingBoxplot <- genrePlot + 
   geom_boxplot(
-    data=complete_data,
+    data=completeDataByGenre,
     aes(x=reorder(genres,-n),
         y=rating)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
@@ -252,8 +270,10 @@ avg_rating_by_genre <- plot_genre +
   xlab("Genres (top 10 rated)") + 
   coord_cartesian(xlim =c(1, 10))
 
-ggarrange(rating_by_genre,avg_rating_by_genre)
+ggarrange(genreRatingsBarPlot,UserAvgRatingBoxplot)
 
+#----------------------------------------------------------------------------------------------------------------
+#Extracting date and time of the rating
 
 edx <- edx %>% 
   mutate(
@@ -266,15 +286,6 @@ edx <- edx %>%
 
 head(edx)
 
-edx <- edx %>% 
-  mutate(
-    yearOfRelease = as.numeric(
-      substring(
-        title, 
-        nchar(title)-4,
-        nchar(title)-1)),
-    title = substring(title, 1,nchar(title)-7))
-
 validation <- validation %>% 
   mutate(
     date = format(as_datetime(timestamp), 
@@ -285,27 +296,43 @@ validation <- validation %>%
 
 head(validation)
 
+#----------------------------------------------------------------------------------------------------------------
+#Extracting year of release
+
+edx <- edx %>% 
+  mutate(
+    yearOfRelease = as.numeric(
+      substring(
+        title, 
+        nchar(title)-4,
+        nchar(title)-1)),
+    title = substring(title, 1,nchar(title)-7))
 
 
 validation <- validation %>% 
   mutate(
-    yearOfRelease = as.numeric(substring(title, nchar(title)-4,nchar(title)-1)),
+    yearOfRelease = as.numeric(substring(title, 
+                                         nchar(title)-4,
+                                         nchar(title)-1)),
     title = substring(title, 1,nchar(title)-7))
 
-dataY <- edx %>% 
+#----------------------------------------------------------------------------------------------------------------
+#Is there a correlation between the number of ratings by year of release and the value of the rating ?
+
+dataYearOfRelease <- edx %>% 
   group_by(yearOfRelease) %>% 
   summarize(n=n()) %>%
   top_n(10,n)
 
-complete_data <- left_join(edx %>% 
-                             filter(yearOfRelease %in% dataY$yearOfRelease),
-                           dataY,
+completeDataByYearOfRelease <- left_join(edx %>% 
+                             filter(yearOfRelease %in% dataYearOfRelease$yearOfRelease),
+                           dataYearOfRelease,
                            by="yearOfRelease")
 
-plot_year <- ggplot()
+plotYearOfRelease <- ggplot()
 
-rating_by_year <- plot_year  + 
-  geom_bar(data=dataY,
+yearOfReleaseRatingsBarPlot <- plotYearOfRelease  + 
+  geom_bar(data=dataYearOfRelease,
            aes(x=reorder(yearOfRelease,-n), 
                y=n),
            stat="identity") +
@@ -314,9 +341,9 @@ rating_by_year <- plot_year  +
   xlab("Years (top 10 rated)") + 
   coord_cartesian(xlim =c(1, 10))
 
-avg_rating_by_year <- plot_year + 
+YearOfReleaseAvgRatingBoxplot <- plotYearOfRelease + 
   geom_boxplot(
-    data=complete_data
+    data=completeDataByYearOfRelease
     ,aes(x=reorder(yearOfRelease,-n),
          y=rating)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
@@ -324,21 +351,24 @@ avg_rating_by_year <- plot_year +
   xlab("Years (top 10 rated)") + 
   coord_cartesian(xlim =c(1, 10))
 
-ggarrange(rating_by_year,avg_rating_by_year)
+ggarrange(yearOfReleaseRatingsBarPlot,YearOfReleaseAvgRatingBoxplot)
+
+#----------------------------------------------------------------------------------------------------------------
+#Is there a correlation between the number of ratings by year and the value of the rating ?
 
 #year of rating
 
-dataY1 <- edx %>% 
+dataYear <- edx %>% 
   group_by(year) %>% 
   summarize(n=n())
 
-complete_data <- left_join(edx %>% 
-                             filter(year %in% dataY1$year),
-                           dataY1, 
+completeDataYear <- left_join(edx %>% 
+                             filter(year %in% dataYear$year),
+                             dataYear, 
                            by="year")
-plot_year <- ggplot()
-rating_by_year <- plot_year  + 
-  geom_bar(data=dataY1,
+plotYear <- ggplot()
+yearRatingsBarPlot <- plotYear  + 
+  geom_bar(data=dataYear,
            aes(x=year, 
                y=n, 
                group=year),
@@ -347,8 +377,8 @@ rating_by_year <- plot_year  +
   ylab("Number of ratings") + 
   xlab("Years (top 10 rated)")
 
-avg_rating_by_year <- plot_year + 
-  geom_boxplot(data=complete_data,
+YearAvgRatingBoxplot <- plotYear + 
+  geom_boxplot(data=completeDataYear,
                aes(x=year,
                    y=rating, 
                    group=year)) +
@@ -356,10 +386,12 @@ avg_rating_by_year <- plot_year +
   ylab("Ratings") + 
   xlab("Years (top 10 rated)")
 
-ggarrange(rating_by_year,avg_rating_by_year)
+ggarrange(yearRatingsBarPlot,YearAvgRatingBoxplot)
 
 #-------------------------------------------------------------------------------------------------
 #genre analysis
+
+#Extracting primary genres
 primarygenres <- edx %>% 
   filter(!str_detect(genres,"[|]")) %>% 
   pull(genres) %>% 
@@ -374,24 +406,29 @@ genreDatas <- sapply(c(1:length(primarygenres)), function(index){
 
 colnames(genreDatas) = primarygenres
 
+#-------------------------------------------------------------------------------------------------
+#Is there a correlation between the number of genres and the value of the rating ?
+
+#Count genres on the edx and validation set
 edx <- edx %>% 
   mutate(ngenres = str_count(genres,"[|]") + 1)
 
 validation <- validation %>% 
   mutate(ngenres = str_count(genres,"[|]") + 1)
 
-dataNG <- edx %>% 
+#Analyse the number of genres : 10 number of genre the most rated
+dataNGenres <- edx %>% 
   group_by(ngenres) %>% 
   summarize(n=n()) %>%
   top_n(10,n)
-complete_data <- left_join(edx %>% 
-                             filter(ngenres %in% dataNG$ngenres),
-                           dataNG, 
+completeDataNGenres <- left_join(edx %>% 
+                             filter(ngenres %in% dataNGenres$ngenres),
+                           dataNGenres, 
                            by="ngenres")
-plot_ng <- ggplot()
+plotNGenres <- ggplot()
 
-rating_by_ng <- plot_ng  + 
-  geom_bar(data=dataNG,
+nGenresBarPlot <- plotNGenres  + 
+  geom_bar(data=dataNGenres,
            aes(x=ngenres, 
                y=n, 
                group=ngenres),
@@ -400,9 +437,9 @@ rating_by_ng <- plot_ng  +
   ylab("Number of ratings") + 
   xlab("Number of genres (top 10 rated)")
 
-avg_rating_by_ng <- plot_ng + 
+nGenresAvgRatingBoxplot <- plotNGenres + 
   geom_boxplot(
-    data=complete_data,
+    data=completeDataNGenres,
     aes(x=ngenres,
         y=rating, 
         group=ngenres)) +
@@ -410,7 +447,7 @@ avg_rating_by_ng <- plot_ng +
   ylab("Ratings") + 
   xlab("Number of genres (top 10 rated)")
 
-ggarrange(rating_by_ng,avg_rating_by_ng)
+ggarrange(nGenresBarPlot,nGenresAvgRatingBoxplot)
 
 #-------------------------------------------------------------------------------------------------
 #Creation of a train set and a test set from edx dataset for cross-validation
@@ -438,6 +475,7 @@ removed <- anti_join(temp_test,
 train_edx <- rbind(train_edx, 
                    removed)
 
+
 edx_movies <- edx %>% 
   group_by(movieId) %>% 
   summarize(
@@ -457,11 +495,11 @@ movie_avgs <- edx %>%
   summarize(b_i = mean(rating - mu))
 
 #determining best lambda
-lambdas <- seq(0,10,0.25)
+lambdasRough <- seq(0,10,1)
 
 mu <- mean(train_edx$rating)
 
-rmses <- sapply(lambdas, function(lambda){
+functionRmses <- function(lambda){
   
   
   #movie effect
@@ -508,15 +546,19 @@ rmses <- sapply(lambdas, function(lambda){
               by="yearOfRelease") %>%
     mutate(pred = mu + b_i + b_u + b_g + b_y) %>%
     pull(pred)
-
-
+  
+  
   return(RMSE(predicted_ratings, test_edx$rating))
+  
+}
 
-})
+rmsesRough <- sapply(lambdasRough, functionRmses)
 
 qplot(lambdas,rmses)
 
-lambda= lambdas[which.min(rmses)]
+lambdaFine= seq(lambdas[which.min(rmses)] -1, lambdas[which.min(rmses)] + 1, 0.25)
+
+rmses <- sapply(lambdasFine, functionRmses)
 
 mu <- mean(train_edx$rating)
 
