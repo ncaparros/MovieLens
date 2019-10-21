@@ -17,6 +17,13 @@ if(!require(tidyverse)) install.packages("tidyverse", repos = "http://cran.us.r-
 if(!require(caret)) install.packages("caret", repos = "http://cran.us.r-project.org")
 if(!require(data.table)) install.packages("data.table", repos = "http://cran.us.r-project.org")
 
+#Some additionnal packages
+if(!require(ggplot2)) install.packages("ggplot2", repos = "http://cran.us.r-project.org")
+if(!require(lubridate)) install.packages("lubridate", repos = "http://cran.us.r-project.org")
+if(!require(dplyr)) install.packages("dplyr", repos = "http://cran.us.r-project.org")
+if(!require(stringr)) install.packages("stringr", repos = "http://cran.us.r-project.org")
+if(!require(ggpubr)) install.packages("ggpubr", repos = "http://cran.us.r-project.org")
+
 dl <- tempfile()
 download.file("http://files.grouplens.org/datasets/movielens/ml-10m.zip", dl)
 
@@ -56,9 +63,9 @@ rm(dl, ratings, movies, test_index, temp, movielens, removed)
 
 ## Introduction
 
-The following report is the analysis and results of the MovieLens Assessment of the Data Science Program of HarvardX, available on Edx (https://https://courses.edx.org/courses/course-v1:HarvardX+PH125.9x+2T2019/course/).
+The following report is the analysis and results of the MovieLens Assessment of the Data Science Program of HarvardX, available on Edx (https://https://courses.edx.org/courses/course-v1:HarvardX+PH125.9x+2T2019/course/). The goal was to predict the ratings of some movies contained in the validation dataset, based on the information of the training dataset. 
 
-```{r Counts include=FALSE}
+```{r Counts, include=FALSE}
 #Number of rows and columns of the dataset provided by the edx dataset
 nrows <- nrow(edx)
 ncols <-ncol(edx)
@@ -71,37 +78,116 @@ number_of_users <- edx %>% group_by(userId) %>% summarize() %>% nrow()
 
 ## Overview
 
-The purpose of this report was to develop a movie recommendation system using a subset of the MovieLens dataset. MovieLenses datasets are available on grouplens.org and several sizes are at one's disposal. As required in the assessment, one was using the MovieLens 10M Dataset, which provides roughly ten millions (`nrows`) of movie rating. The initialization of the dataset was provided at the begining of the assessment by HarvardX.
+The purpose of this report was to develop a movie recommendation system using a subset of the MovieLens dataset. MovieLenses datasets are available on grouplens.org and several sizes are at one's disposal. As required in the assessment, one was using the MovieLens 10M Dataset, which provides roughly ten millions (`r nrows`) of movie ratings. The initialization of the dataset was provided at the begining of the assessment by HarvardX.
 
 The dataset initialized was made up of six columns as follow :
 
-* userId : the identifier of the user relative of the rating in the row (`class(edx$userId)`)
-* movieId : the identifier of the movie rated in the row (numeric)
-* rating : the rating given by the user, which can take values from 0 to 5, as whole star ratings (0 to 5) and half star ratings (0.5 to 4.5) (numeric)
-* timestamp : the date and time as a timestamp at which the user left it's rating (numeric)
-* title : the title and year of release of the movie rated (character)
-* genres : the genre or genres of the movie rated (character)
+* userId : the identifier of the user relative of the rating in the row (`r class(edx$userId)`)
+* movieId : the identifier of the movie rated in the row (`r class(edx$movieId)`)
+* rating : the rating given by the user, which can take values from 0 to 5, as whole star ratings (0 to 5) and half star ratings (0.5 to 4.5) (`r class(rating)`)
+* timestamp : the date and time as a timestamp at which the user left it's rating (`r class(edx$timestamp)`)
+* title : the title and year of release of the movie rated (`r class(edx$title)`)
+* genres : the genre or genres of the movie rated (`r class(genres)`)
 
-The dataset provides information for `number_of_movies` different movies and `number_of_users` distinct users.
+```{r Preview of the dataset, echo=FALSE}
+head(edx)
+```
 
+The dataset provided information for `r number_of_movies` different movies and `r number_of_users` distinct users. One has collected some insight of the dataset in order to visualize 
+### Movies
+
+```{r movie plot top 10 }
+
+```
+
+### Users
+
+### Genres
+```{r plot top 10 }
+
+options("scipen"=100)
+edx %>% 
+  group_by(genres) %>% 
+  summarize(n=n(),avg_rating=mean(rating))%>% 
+  top_n(10,n) %>% 
+  arrange(desc(n)) %>% 
+  ggplot() + geom_bar(aes(x=reorder(genres,-n), y=n), fill = "#FF6666", stat="identity") + geom_point(x=reorder(genres,-n),y=avg_rating)
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+  ylab("Number of ratings") + xlab("Genres (top 10)")
+
+```
+#### Primary genres
+
+### Year of release
 
 ## Executive summary 
 
 section that describes the dataset and summarizes the goal of the project and key steps that were performed
+
 ## Methods/analysis section that explains the process and techniques used, such as data cleaning, data exploration and visualization, any insights gained, and your modeling approach
-## Results section that presents the modeling results and discusses the model performance
 
-## Conclusion s
-```{r Report}
-#top10_genres_by_nrating
+
+### Data cleaning
+
+The first step one chose to do was converting the `timestamp` column into a `date` (Year-Month-Day) and `time` (Hour:Minute) columns. The original `timestamp` column was removed. This step allowed one to analyse datas by date and hour of the day. The validation dataset had been cleaned in the same way.
+
+```{r Converting dates, include=FALSE}
+edx <- edx %>% 
+  mutate(
+    date = format(as_datetime(timestamp), format="%Y-%m-%d"), 
+    time=format(as_datetime(timestamp), format="%H:%M")) %>% 
+  select(-timestamp)
+
+
+validation <- validation %>% 
+  mutate(
+    date = format(as_datetime(timestamp), format="%Y-%m-%d"), 
+    time=format(as_datetime(timestamp), format="%H:%M")) %>% 
+  select(-timestamp)
+
 ```
 
-## Including Plots
+The cleaned dataset looked like : 
 
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r Preview of converted dates}
+head(edx)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+The next step was to extract the year the movie was released and add it to both the `edx` and `validation` datasets.
+In order to do this, one had to process the `title` column, which contained the title and the year of release between parenthesis. The `title would` contain only the title, and the new column `yearOfRelease` would contain the year previously stored in the title.
+
+```{r Extracting year of release, include=FALSE}
+edx <- edx %>% mutate(
+  yearOfRelease = as.numeric(substring(title, nchar(title)-4,nchar(title)-1)),
+  title = substring(title, 1,nchar(title)-7))
+
+validation <- validation %>% mutate(
+    yearOfRelease = as.numeric(substring(title, nchar(title)-4,nchar(title)-1)),
+    title = substring(title, 1,nchar(title)-7))
+```
+
+
+### Determining the model
+
+Considering the rather large dataset at one's disposal, training algorithms as linear models cannot be used. One chose instead to fit the model :
+
+$Y_{u,...,i} = \mu + \sum_{n=u,...,i} b_{n} + \varepsilon_{u,...,i}$
+
+Where $Y$ is the rating prediction knowing all the parameters $u,...,i$, $\mu$ the average rating, and $b$ the effects for each parameter. $\varepsilon$ represents the error, or the residual. Since it was not possible to compute it, one was considering it as in the perfect scenario, which means $\varepsilon$ equal to zero.
+
+### Effects
+
+### Parameters
+
+#### Creating training and test set
+
+#### Picking penalty term
+
+## Results
+
+### Final model
+
+###RMSE
+
+## Conclusion
+
