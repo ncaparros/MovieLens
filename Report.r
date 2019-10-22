@@ -149,6 +149,12 @@ if(!require(ggpubr)) install.packages("ggpubr", repos = "http://cran.us.r-projec
 options("scipen"=100)
 
 #----------------------------------------------------------------------------------------------------------------
+#Aanalysis and effect
+
+#average of ratings
+mu_rating = mean(edx$rating)
+
+#----------------------------------------------------------------------------------------------------------------
 #Is there a correlation between the number of ratings for a movie and the value of the rating ?
 
 # Movie ratings analysis : top 10 reviewed movies
@@ -194,6 +200,13 @@ avg_rating_by_movie <- plotByMovie +
 #Ploting the barchart and the boxplot side by side
 ggarrange(rating_by_movie,avg_rating_by_movie)
 
+#Movie effect
+movieAvgs <- edx %>%
+  group_by(movieId) %>%
+  summarize(b_m = mean(rating - mu_rating))
+
+movieAvgs %>% qplot(b_m, geom ="histogram", bins = 10, data = ., color = I("black"))
+
 #----------------------------------------------------------------------------------------------------------------
 #Is there a correlation between the number of ratings by user and the value of the rating ?
 
@@ -235,6 +248,13 @@ UserAvgRatingBoxplot <- userPlot +
 
 ggarrange(userRatingsBarPlot,UserAvgRatingBoxplot)
 
+#user effect
+userAvgs <- edx %>%
+  group_by(userId) %>%
+  summarize(b_u = mean(rating - mu_rating))
+
+userAvgs %>% qplot(b_u, geom ="histogram", bins = 10, data = ., color = I("black"))
+
 #----------------------------------------------------------------------------------------------------------------
 #Is there a correlation between the number of ratings by user and the value of the rating ?
 
@@ -272,6 +292,14 @@ UserAvgRatingBoxplot <- genrePlot +
 
 ggarrange(genreRatingsBarPlot,UserAvgRatingBoxplot)
 
+#genre effect
+genreAvgs <- edx %>%
+  group_by(genres) %>%
+  summarize(b_g = mean(rating - mu_rating))
+
+genreAvgs %>% qplot(b_g, geom ="histogram", bins = 10, data = ., color = I("black"))
+
+
 #----------------------------------------------------------------------------------------------------------------
 #Extracting date and time of the rating
 
@@ -295,6 +323,47 @@ validation <- validation %>%
   select(-timestamp)
 
 head(validation)
+
+#date effect
+
+edx %>% mutate(date2 = week(date)) %>%
+  group_by(date2) %>%
+  summarize(rating = mean(rating)) %>%
+  ggplot(aes(date2, rating)) +
+  geom_point() +
+  geom_smooth()
+
+edx %>% group_by(genres) %>%
+  summarize(n = n(), avg = mean(rating), se = sd(rating)/sqrt(n())) %>%
+  filter(n >= 1000) %>% 
+  mutate(genres = reorder(genres, avg)) %>%
+  ggplot(aes(x = genres, y = avg, ymin = avg - 2*se, ymax = avg + 2*se)) + 
+  geom_point() +
+  geom_errorbar() + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+edx %>%
+  group_by(ngenres) %>%
+  summarize(rating = mean(rating)) %>%
+  mutate(genres = reorder(ngenres, rating)) %>%
+  ggplot(aes(ngenres, rating)) +
+  geom_point() +
+  geom_smooth()
+
+edx %>%
+  group_by(year(date)) %>%
+  summarize(rating = mean(rating)) %>%
+  mutate(genres = reorder(year(date), rating)) %>%
+  ggplot(aes(year(date), rating)) +
+  geom_point() +
+  geom_smooth()
+
+dateAvgs <- edx %>%
+  group_by(day(date)) %>%
+  summarize(b_d = mean(rating - mu_rating))
+
+dateAvgs %>% qplot(b_d, geom ="histogram", bins = 12, data = ., color = I("black"))
+
 
 #----------------------------------------------------------------------------------------------------------------
 #Extracting year of release
@@ -388,6 +457,13 @@ YearAvgRatingBoxplot <- plotYear +
 
 ggarrange(yearRatingsBarPlot,YearAvgRatingBoxplot)
 
+# year of release effect
+yearOfReleaseAvgs <- edx %>%
+  group_by(yearOfRelease) %>%
+  summarize(b_yor = mean(rating - mu_rating))
+
+yearOfReleaseAvgs %>% qplot(b_yor, geom ="histogram", bins = 100, data = ., color = I("black"))
+
 #-------------------------------------------------------------------------------------------------
 #genre analysis
 
@@ -448,6 +524,13 @@ nGenresAvgRatingBoxplot <- plotNGenres +
   xlab("Number of genres (top 10 rated)")
 
 ggarrange(nGenresBarPlot,nGenresAvgRatingBoxplot)
+
+# year of release effect
+nGenresAvgs <- edx %>%
+  group_by(genres) %>%
+  summarize(b_ng = mean(rating - mu_rating))
+
+nGenresAvgs %>% qplot(b_ng, geom ="histogram", bins = 800, data = ., color = I("black"))
 
 #-------------------------------------------------------------------------------------------------
 #Creation of a train set and a test set from edx dataset for cross-validation

@@ -61,10 +61,6 @@ rm(dl, ratings, movies, test_index, temp, movielens, removed)
 
 ```
 
-## Introduction
-
-The following report is the analysis and results of the MovieLens Assessment of the Data Science Program of HarvardX, available on Edx (https://https://courses.edx.org/courses/course-v1:HarvardX+PH125.9x+2T2019/course/). The purpose of this project was to develop a movie recommendation system using a subset of the MovieLens dataset. MovieLenses datasets are available on grouplens.org and several sizes are at one's disposal. As required in the assessment, one was using the MovieLens 10M Dataset, which provides roughly ten millions (`r nrows`) of movie ratings. The initialization of the dataset was provided at the begining of the assessment by HarvardX.
-
 ```{r Counts, include=FALSE}
 #Number of rows and columns of the dataset provided by the edx dataset
 nrows <- nrow(edx)
@@ -76,57 +72,42 @@ number_of_users <- edx %>% group_by(userId) %>% summarize() %>% nrow()
 
 ```
 
+## Introduction
 
-The dataset initialized was made up of six columns as follow :
+The following report is the analysis and results of the MovieLens Assessment of the Data Science Program of HarvardX, available on Edx (https://https://courses.edx.org/courses/course-v1:HarvardX+PH125.9x+2T2019/course/). The purpose of this project was to develop a movie recommendation system using a subset of the MovieLens dataset. MovieLenses datasets are available on grouplens.org and several sizes are at one's disposal. As required in the assessment, one was using the MovieLens 10M Dataset, which provides roughly ten millions (`r nrows`) of movie ratings. The initialization of the dataset was provided at the begining of the assessment by HarvardX. Each row of the dataset represented a rating, of one movie, by one user, at a certain time.
 
-* userId : the identifier of the user relative of the rating in the row (`r class(edx$userId)`)
-* movieId : the identifier of the movie rated in the row (`r class(edx$movieId)`)
-* rating : the rating given by the user, which can take values from 0 to 5, as whole star ratings (0 to 5) and half star ratings (0.5 to 4.5) (`r class(rating)`)
-* timestamp : the date and time as a timestamp at which the user left it's rating (`r class(edx$timestamp)`)
-* title : the title and year of release of the movie rated (`r class(edx$title)`)
-* genres : the genre or genres of the movie rated (`r class(genres)`)
+## Overview
 
-```{r Preview of the dataset, echo=FALSE}
-head(edx)
-```
+The dataset initialized was made of six columns as follow :
 
-The dataset provided information for `r number_of_movies` different movies and `r number_of_users` distinct users. One has collected some insight of the dataset in order to visualize 
-### Movies
+* userId : the identifier of the user relative of the rating in the row
+* movieId : the identifier of the movie rated in the row
+* rating : the rating given by the user, which can take values from 0 to 5, as whole star ratings (0 to 5) and half star ratings (0.5 to 4.5)
+* timestamp : the date and time as a timestamp at which the user left it's rating
+* title : the title and year of release of the movie rated
+* genres : the genre or genres of the movie rated
 
-```{r movie plot top 10 }
+| Parameter name 	| Class	| Number of distinct values | Minimum value 	|  Maximum value 	|  Mean value 	| Median value |
+|:----:	|:-:	|:-:	|:-:	|:-:	|
+| userId 	|  `r class(edx$userId)` 	| `r number_of_users` |  Not relevant 	|  Not relevant 	| Not relevant | Not relevant | 
+| movieId	| `r class(edx$movieId)` | `r number_of_movies` |Not relevant 	|  Not relevant 	| Not relevant | Not relevant | 
+| rating	| `r class(edx$rating)`	| `r nrow(edx %>% filter(!is.na(rating)))` |  `r min(edx$rating)` 	| `r max(edx$rating)`	| `r mean(edx$rating)` | `r median(edx$rating)` |
+| timestamp 	|  `r class(edx$timestamp)` 	| `r nrow(edx %>% filter(!is.na(timestamp)))` |  `r min(edx$timestamp)` 	| `r max(edx$timestamp)`	| `r mean(edx$timestamp)` | `r median(edx$timestamp)` |
+| title	| `r class(edx$title)` | `r number_of_movies` |Not relevant 	|  Not relevant 	| Not relevant | Not relevant | 
+| genres	| `r class(edx$genres)`	| `r length(edx %>% pull(genres)%>% unique())`  |Not relevant 	|  Not relevant 	| Not relevant | Not relevant | 
 
-```
+A first glance at the current dataset showed that : 
 
-### Users
+* The timestamp information clearly appeared uninterpretable. 
+* The information of the year of release was contained in the title column.
 
-### Genres
-```{r plot top 10 }
-
-options("scipen"=100)
-edx %>% 
-  group_by(genres) %>% 
-  summarize(n=n(),avg_rating=mean(rating))%>% 
-  top_n(10,n) %>% 
-  arrange(desc(n)) %>% 
-  ggplot() + geom_bar(aes(x=reorder(genres,-n), y=n), fill = "#FF6666", stat="identity") + geom_point(x=reorder(genres,-n),y=avg_rating)
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
-  ylab("Number of ratings") + xlab("Genres (top 10)")
-
-```
-#### Primary genres
-
-### Year of release
-
-## Executive summary 
-
-section that describes the dataset and summarizes the goal of the project and key steps that were performed
-
-## Methods/analysis section that explains the process and techniques used, such as data cleaning, data exploration and visualization, any insights gained, and your modeling approach
-
+Before further investigation, one needed to clean those timestamp values and extract the release's year.
 
 ### Data cleaning
 
-The first step one chose to do was converting the `timestamp` column into a `date` (Year-Month-Day) and `time` (Hour:Minute) columns. The original `timestamp` column was removed. This step allowed one to analyse datas by date and hour of the day. The validation dataset had been cleaned in the same way.
+The first step one took was converting the `timestamp` column into a `date` (Year-Month-Day) and `time` (Hour:Minute) columns. The original `timestamp` column was removed. This step allowed one to analyse datas by date and hour of the day. The validation dataset had been cleaned in the same way.
+
+One wondered if the time of the day, the day of the month, the month of the year, or even the year were influencing the ratings of the users.
 
 ```{r Converting dates, include=FALSE}
 edx <- edx %>% 
@@ -144,14 +125,10 @@ validation <- validation %>%
 
 ```
 
-The cleaned dataset looked like : 
-
-```{r Preview of converted dates}
-head(edx)
-```
-
 The next step was to extract the year the movie was released and add it to both the `edx` and `validation` datasets.
-In order to do this, one had to process the `title` column, which contained the title and the year of release between parenthesis. The `title would` contain only the title, and the new column `yearOfRelease` would contain the year previously stored in the title.
+In order to do this, one had to process the `title` column, which contained the title and the year of release between parenthesis. The `title would` contain only the title, and the new column `yearOfRelease` would contain the year previously stored in the title. 
+
+As some titles had some string characters between parenthesis, and since the structure of the title (`title (year of release)`) was always the same, one decided to simply use `substring` instead of a `regex`.
 
 ```{r Extracting year of release, include=FALSE}
 edx <- edx %>% mutate(
@@ -163,14 +140,47 @@ validation <- validation %>% mutate(
     title = substring(title, 1,nchar(title)-7))
 ```
 
+The cleaned dataset looked like : 
+
+```{r Preview of converted dates}
+head(edx)
+```
+
+### Movies
+
+```{r movie plot top 10 }
+
+```
+
+### Users
+
+### Genres
+
+#### Primary genres
+
+### Year of release
+
+### Date and time
+
+## Executive summary 
+
+section that describes the dataset and summarizes the goal of the project and key steps that were performed
+
+## Methods/analysis section that explains the process and techniques used, such as data cleaning, data exploration and visualization, any insights gained, and your modeling approach
+
+
 
 ### Determining the model
 
 Considering the rather large dataset at one's disposal, training algorithms as linear models cannot be used. One chose instead to fit the model :
 
-$Y_{u,...,i} = \mu + \sum_{n=u,...,i} b_{n} + \varepsilon_{u,...,i}$
+$Y_{u,i} = \mu + \sum_{u,i} b_{n} + \varepsilon_{u,i}$
 
-Where $Y$ is the rating prediction knowing all the parameters $u,...,i$, $\mu$ the average rating, and $b$ the effects for each parameter. $\varepsilon$ represents the error, or the residual. Since it was not possible to compute it, one was considering it as in the perfect scenario, which means $\varepsilon$ equal to zero.
+Where $Y$ is the rating prediction knowing all the parameters $u,i$, $\mu$ the average rating, and $b$ the effects for each parameter. $\varepsilon$ represents the error, or the residual. Since it was not possible to compute it, one was considering it as in the perfect scenario, which means $\varepsilon$ equal to zero.
+
+The `b` were regularized using the penalized least squares, using a penalty term $\lambda$, which minimizes the residual sum of squares plus that penalty term, as:
+
+$PLSE = \frac{1}{N} \sum_{u,i}(y_{u,i} - \mu - b_{i})^2 + \lambda \sum(b_{i})^2 $
 
 ### Effects
 
@@ -188,3 +198,4 @@ Where $Y$ is the rating prediction knowing all the parameters $u,...,i$, $\mu$ t
 
 ## Conclusion
 
+##Sources and references
