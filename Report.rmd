@@ -107,23 +107,32 @@ Before further investigation, one needed to clean those timestamp values and ext
 
 The first step one took was converting the `timestamp` column into a `date` (Year-Month-Day) and `time` (Hour:Minute) columns. The original `timestamp` column was removed. This step allowed one to analyse datas by date and hour of the day. The validation dataset had been cleaned in the same way.
 
-One wondered if the time of the day, the day of the month, the month of the year, or even the year were influencing the ratings of the users.
+One wondered if the time of the day, the day of the month, the month of the year, or even the year were influencing the ratings of the users. Could the date influence the rating of one given user ? Could the rating of that particular user change depending of the period ?
+
+It seemed also appropriate to extract the details of the date (as year, month and day) for further analysis.
 
 ```{r Converting dates, include=FALSE}
 edx <- edx %>% 
   mutate(
     date = format(as_datetime(timestamp), format="%Y-%m-%d"), 
-    time=format(as_datetime(timestamp), format="%H:%M")) %>% 
+    time=format(as_datetime(timestamp), format="%H:%M"),
+    year=year(date),
+    month=month(date),
+    day=day(date)) %>% 
   select(-timestamp)
 
 
 validation <- validation %>% 
   mutate(
     date = format(as_datetime(timestamp), format="%Y-%m-%d"), 
-    time=format(as_datetime(timestamp), format="%H:%M")) %>% 
+    time=format(as_datetime(timestamp), format="%H:%M"),
+     year=year(date),
+    month=month(date),
+    day=day(date)) %>% 
   select(-timestamp)
 
 ```
+
 
 The next step was to extract the year the movie was released and add it to both the `edx` and `validation` datasets.
 In order to do this, one had to process the `title` column, which contained the title and the year of release between parenthesis. The `title would` contain only the title, and the new column `yearOfRelease` would contain the year previously stored in the title. 
@@ -142,21 +151,194 @@ validation <- validation %>% mutate(
 
 The cleaned dataset looked like : 
 
-```{r Preview of converted dates}
+```{r Preview of converted dates, include=FALSE}
 head(edx)
 ```
 
 ### Movies
 
-```{r movie plot top 10 }
+The `edx` dataset provided ratings for `number_of_movies` different movies.
+
+```{r Movies, include=FALSE}
+# Display whole integers, not scientific notation
+options("scipen"=100)
+
+# Movie ratings analysis : top 10 reviewed movies
+dataByMovie <- edx %>% 
+  group_by(movieId) %>% 
+  summarize(n=n()) %>%
+  top_n(10,n)
+
+# Add total ratings count to the top 10 reviewed movies
+completeDataByMovie <- left_join(edx %>%
+                                   filter(movieId %in% dataByMovie$movieId),
+                                 dataByMovie,
+                                 by="movieId")
+
+#Initialize the plot
+plotByMovie <- ggplot()
+
+#Bar chart of the 10 most rated movies (x) versus the number of ratings for each movie (y)
+ratingByMovieBarPlot <- plotByMovie  + 
+  geom_bar(data= dataByMovie %>%
+             group_by(movieId),
+           aes(x=reorder(title,-n),
+               y=n),
+           stat="identity") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+  ylab("Number of ratings") + 
+  xlab("Movies (top 10 rated)") + 
+  coord_cartesian(xlim =c(1, 10))
+
+#Boxplot of the ratings for the 10 most rated movies
+MovieAvgRatingBoxplot <- plotByMovie + 
+  geom_boxplot(
+    data=completeDataByMovie
+    ,aes(
+      x=reorder(title,-n),
+      y=rating)
+    ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+  ylab("Ratings") + 
+  xlab("Movies (top 10 rated)") + 
+  coord_cartesian(xlim =c(1, 10))
+
+#Ploting the barchart and the boxplot side by side
+ggarrange(ratingByMovieBarPlot,MovieAvgRatingBoxplot)
 
 ```
 
+It appeared that the most rated movies were not necessarily the best rated movies, and the distribution of the ratings varied substantially. For instance, in the right plot, the first most rated movie (Pulp Fiction) has 50% of it's ratings between 4 and 5, with a median of 4.5, while Jurassic Park, the fourth most rated movie has 50% of it's ratings between 3 and 4, and 25% of it's ratings equal to 4. The Shawshank Redemption (fifth most rated movie) even has 25% of it's ratings equal to 5.
+
+The movie bias was obvious and was to be introduced later in the Effects section.
+
 ### Users
 
-### Genres
+Each movie rating was associated to a user. Users could rate one or several movies, and the following charts shows the number of ratings, for the ten most prolific raters, and the ratings of those users.
+
+```{r Users - number of ratings, include=FALSE}
+#User ratings analysis : 10 most raters
+dataByUser <- edx %>% 
+  group_by(userId) %>% 
+  summarize(n=n()) %>%
+  top_n(10,n)
+
+#Add total ratings count to the top 10 raters
+completeDataByUser <- left_join(edx %>% 
+                             filter(userId %in% dataByUser$userId),
+                           dataByUser, 
+                           by="userId")
+
+#Initialize the plot
+userPlot <- ggplot()
+
+
+userRatingsBarPlot <- userPlot  + 
+  geom_bar(data=
+             completeDataByUser %>% group_by(userId),
+           aes(x = reorder(userId,-n),
+               y = n),
+           stat="identity") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+  ylab("Number of ratings") + 
+  xlab("Users (top 10 raters)") + 
+  coord_cartesian(xlim =c(1, 10))
+
+UserAvgRatingBoxplot <- userPlot + 
+  geom_boxplot(data=completeDataByUser
+    ,aes(x=reorder(userId,-n),
+         y=rating)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+  ylab("Ratings") + 
+  xlab("Users (top 10 raters)") + 
+  coord_cartesian(xlim =c(1, 10))
+
+ggarrange(userRatingsBarPlot,UserAvgRatingBoxplot)
+
+```
+
+It was clear that the number of ratings did not affect the ratings by user. Some users tend to be more severe than others, and some tend to be give high ratings more easily. This induced a user bias that was described and used in the Effect section.
+
+### Genre
+
+Since we all tend to appreciate some genres more than others, it was logical to analyse the ratings depending of the genre. The following plots showed respectively the number of ratings versus the genre, and the repartition of the ratings by genre, for the 10 most reviewed genres.
+
+```{r Genre, inclue=FALSE}
+
+dataByGenre <- edx %>% 
+  group_by(genres) %>% 
+  summarize(n=n()) %>%
+  top_n(10,n)
+
+completeDataByGenre <- left_join(edx %>% 
+                             filter(genres %in% dataByGenre$genres),
+                           dataByGenre, 
+                           by="genres")
+genrePlot <- ggplot()
+
+genreRatingsBarPlot <- genrePlot  + 
+  geom_bar(data=dataByGenre,
+           aes(x=reorder(genres,-n), 
+               y=n),
+           stat="identity") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+  ylab("Number of ratings") + 
+  xlab("Genres (top 10 rated)") + 
+  coord_cartesian(xlim =c(1, 10))
+
+UserAvgRatingBoxplot <- genrePlot + 
+  geom_boxplot(
+    data=completeDataByGenre,
+    aes(x=reorder(genres,-n),
+        y=rating)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+  ylab("Ratings") + 
+  xlab("Genres (top 10 rated)") + 
+  coord_cartesian(xlim =c(1, 10))
+
+ggarrange(genreRatingsBarPlot,UserAvgRatingBoxplot)
+
+#genre effect
+genreAvgs <- edx %>%
+  group_by(genres) %>%
+  summarize(b_g = mean(rating - mu_rating))
+
+genreAvgs %>% qplot(b_g, geom ="histogram", bins = 10, data = ., color = I("black"))
+
+Drama_DramaCrime = dataByGenre %>% arrange(desc(n)) %>% filter(genres %in% c("Drama","Crime|Drama"))
+
+ratioDrama_DramaCrime = Drama_DramaCrime[1,]$n / Drama_DramaCrime[2,]$n
+
+```
+
+It appeared that there is no clear relationship between the number of ratings and the ratings. The most reviewed genre is Drama (25% of it's ratings between 4 and 4.5), but it seemed to be rated more harshly than the combination Crime/Drama (25% of it's ratings between 4 and 5). Knowing that Drama alone has been reviewed `r ratioDrama_DramaCrime` times more than Drama/Crime.
+
+Comedy, which was the second most reviewed genre, very close to Drama, has a median rating of only 3, with a rather large interquartile range (25% between 3 and 4), but combined with at least another genre (Drama, or Drama and Romance for example), it's median rating went up (25% of it's rating are equal to 4 for the two said combination).
+
+These observations led one to wonder about two biases : genre and the number of genre of each movie. These were to be detailled in the Effects section.
 
 #### Primary genres
+
+```{r Extracting primary genre, include=FALSE}
+#Extracting primary genres
+primarygenres <- edx %>% 
+  filter(!str_detect(genres,"[|]")) %>% 
+  pull(genres) %>% 
+  unique()
+
+genreDatas <- sapply(c(1:length(primarygenres)), function(index){
+  dataByGenre = edx %>% 
+    filter(str_detect(genres, primarygenres[index])) %>% 
+    summarize(avg_rating=mean(rating), 
+              nrating=n())
+})
+
+colnames(genreDatas) = primarygenres
+
+
+```
+
+
 
 ### Year of release
 
@@ -180,9 +362,24 @@ Where $Y$ is the rating prediction knowing all the parameters $u,i$, $\mu$ the a
 
 The `b` were regularized using the penalized least squares, using a penalty term $\lambda$, which minimizes the residual sum of squares plus that penalty term, as:
 
-$PLSE = \frac{1}{N} \sum_{u,i}(y_{u,i} - \mu - b_{i})^2 + \lambda \sum(b_{i})^2 $
+$PLSE = \frac{1}{N} \sum_{u,i}(y_{u,i} - \mu - b_{i})^2 + \lambda \sum(b_{i})^2$
 
 ### Effects
+
+#### Movie effect
+
+```{r Movie effect, include=FALSE}
+#average of ratings
+mu_rating = mean(edx$rating)
+
+#Movie effect
+movieAvgs <- edx %>%
+  group_by(movieId) %>%
+  summarize(b_m = mean(rating - mu_rating))
+
+movieAvgs %>% qplot(b_m, geom ="histogram", bins = 10, data = ., color = I("black"))
+
+```
 
 ### Parameters
 

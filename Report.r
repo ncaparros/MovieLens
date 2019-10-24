@@ -58,84 +58,6 @@ edx <- rbind(edx, removed)
 rm(dl, ratings, movies, test_index, temp, movielens, removed)
 
 # ---------------------------------------------------------------------------------------------------------------
-# This part is relative to the Movie Lens Dataset Quizz
-
-
-#Q1. Number of rows and columns in the dataset
-
-nrow(edx)
-ncol(edx)
-
-
-#Q2. Number of ratings of 0, then 3
-
-edx %>% 
-  filter(rating==0) %>% 
-  nrow()
-
-edx %>% 
-  filter(rating==3) %>% 
-  nrow()
-
-
-#Q3. and Q4. Number of different movies, then users
-
-edx %>% 
-  group_by(movieId) %>% 
-  summarize() %>% 
-  nrow()
-edx %>% 
-  group_by(userId) %>% 
-  summarize() %>% 
-  nrow()
-
-
-#Q5. Number of movie ratings in the genres Drama, Comedy, Thriller and Romance
-
-edx %>% 
-  filter(genres %like% "Drama") %>% 
-  nrow()
-
-edx %>% 
-  filter(genres %like% "Comedy") %>% 
-  nrow()
-edx %>% 
-  filter(genres %like% "Thriller") %>% 
-  nrow()
-edx %>% 
-  filter(genres %like% "Romance") %>% 
-  nrow()
-
-
-#Q6. The movies ordered by number of ratings (from most rated to least rated)
-
-edx %>% 
-  group_by(movieId) %>% 
-  summarize(title = title[1], 
-            nrate=n()) %>% 
-  arrange(desc(nrate))
-
-
-#Q7. The ratings ordered by number of votes (from most given to least)
-
-edx %>% 
-  group_by(rating) %>% 
-  summarize(title = title[1], 
-            nrating=n()) %>% 
-  arrange(desc(nrating))
-
-
-#Q8. The number of ratings (half star rating, then whole star ratings)
-
-edx %>% 
-  filter(rating %in% c(0.5,1.5,2.5,3.5,4.5)) %>% 
-  nrow()
-
-edx %>% 
-  filter(rating %in% c(0,1,2,3,4,5)) %>% 
-  nrow()
-
-# ---------------------------------------------------------------------------------------------------------------
 # This part is relative to the Movie Lens Assessment
 
 # Packages needed to run the code
@@ -173,8 +95,8 @@ completeDataByMovie <- left_join(edx %>%
 plotByMovie <- ggplot()
 
 #Bar chart of the 10 most rated movies (x) versus the number of ratings for each movie (y)
-rating_by_movie <- plotByMovie  + 
-  geom_bar(data= complete_data %>%
+ratingByMovieBarPlot <- plotByMovie  + 
+  geom_bar(data= completeDataByMovie %>%
              group_by(movieId),
            aes(x=reorder(title,-n),
                y=n),
@@ -185,7 +107,7 @@ rating_by_movie <- plotByMovie  +
   coord_cartesian(xlim =c(1, 10))
 
 #Boxplot of the ratings for the 10 most rated movies
-avg_rating_by_movie <- plotByMovie + 
+MovieAvgRatingBoxplot <- plotByMovie + 
   geom_boxplot(
     data=completeDataByMovie
     ,aes(
@@ -198,7 +120,7 @@ avg_rating_by_movie <- plotByMovie +
   coord_cartesian(xlim =c(1, 10))
 
 #Ploting the barchart and the boxplot side by side
-ggarrange(rating_by_movie,avg_rating_by_movie)
+ggarrange(ratingByMovieBarPlot,MovieAvgRatingBoxplot)
 
 #Movie effect
 movieAvgs <- edx %>%
@@ -228,7 +150,7 @@ userPlot <- ggplot()
 
 userRatingsBarPlot <- userPlot  + 
   geom_bar(data=
-             complete_data %>% group_by(userId),
+             completeDataByUser %>% group_by(userId),
            aes(x = reorder(userId,-n),
                y = n),
            stat="identity") +
@@ -238,7 +160,7 @@ userRatingsBarPlot <- userPlot  +
   coord_cartesian(xlim =c(1, 10))
 
 UserAvgRatingBoxplot <- userPlot + 
-  geom_boxplot(data=complete_data
+  geom_boxplot(data=completeDataByUser
     ,aes(x=reorder(userId,-n),
          y=rating)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
@@ -464,6 +386,43 @@ yearOfReleaseAvgs <- edx %>%
 
 yearOfReleaseAvgs %>% qplot(b_yor, geom ="histogram", bins = 100, data = ., color = I("black"))
 
+ id_max_rated = edx %>% group_by(movieId) %>% summarize(n=n()) %>% filter(n==max(n))
+ edx %>% filter(movieId==296 & 
+                  !is.na(date)) %>% 
+   mutate(ye= year(date)) %>% 
+   group_by(ye) %>% 
+   summarize(avg=mean(rating), 
+             se=sd(rating)) %>% 
+   arrange(ye) %>%  ggplot(aes(x = ye, 
+                               y = avg, 
+                               ymin = avg - 2*se, 
+                               ymax = avg + 2*se)) + 
+   geom_point() + 
+   geom_errorbar()
+ 
+ edx %>% filter(!is.na(date)) %>% 
+     mutate(ye= year(date)) %>% 
+     group_by(ye) %>% 
+     summarize(avg=mean(rating), 
+               se=sd(rating)) %>% 
+     arrange(ye) %>%  ggplot(aes(x = ye, 
+                                 y = avg, 
+                                 ymin = avg - 2*se, 
+                                 ymax = avg + 2*se)) + 
+     geom_point() + 
+     geom_errorbar()
+ 
+ edx %>% filter(!is.na(date)) %>% 
+     group_by(yearOfRelease) %>% 
+     summarize(avg=mean(rating), 
+               se=sd(rating)) %>% 
+     arrange(yearOfRelease) %>%  ggplot(aes(x = yearOfRelease, 
+                                 y = avg, 
+                                 ymin = avg - 2*se, 
+                                 ymax = avg + 2*se)) + 
+     geom_point() + 
+     geom_errorbar()
+
 #-------------------------------------------------------------------------------------------------
 #genre analysis
 
@@ -531,6 +490,16 @@ nGenresAvgs <- edx %>%
   summarize(b_ng = mean(rating - mu_rating))
 
 nGenresAvgs %>% qplot(b_ng, geom ="histogram", bins = 800, data = ., color = I("black"))
+
+edx  %>% group_by(ngenres) %>% 
+     summarize(avg=mean(rating), 
+              se=sd(rating)) %>% 
+     arrange(ngenres) %>%  ggplot(aes(x = ngenres, 
+                                 y = avg, 
+                                 ymin = avg - 2*se, 
+                                 ymax = avg + 2*se)) + 
+  geom_point() + 
+    geom_errorbar()
 
 #-------------------------------------------------------------------------------------------------
 #Creation of a train set and a test set from edx dataset for cross-validation
@@ -641,7 +610,7 @@ qplot(lambdasRough,rmsesRough)
 
 lambdaFine= seq(lambdasRough[which.min(rmsesRough)] -1, lambdasRough[which.min(rmsesRough)] + 1, 0.25)
 
-rmsesFine <- sapply(lambdasFine, functionRmses)
+rmsesFine <- sapply(lambdaFine, functionRmses)
 
 mu <- mean(edx$rating)
 
@@ -703,7 +672,7 @@ b_yn <- train_edx %>%
   left_join(b_ng, 
             by="ngenres") %>%
   group_by(year) %>%
-  summarize(b_yn = sum(rating - b_u - b_i- b_y - b_g - b_ng- mu)/(n()+lambda))
+  summarize(b_yn = sum(rating - b_u - b_i- b_y - b_g - b_ng - mu)/(n()+lambda))
 
 predicted_ratings <- 
   test_edx %>% 
@@ -719,7 +688,7 @@ predicted_ratings <-
             by="ngenres") %>%
   left_join(b_yn, 
             by="year") %>%
-  mutate(pred = mu + b_i + b_u + b_g) %>%
+  mutate(pred = mu + b_i + b_u + b_g + b_ng + b_yn) %>%
   pull(pred)
 
 RMSE(predicted_ratings, test_edx$rating)
