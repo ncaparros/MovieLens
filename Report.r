@@ -95,8 +95,8 @@ completeDataByMovie <- left_join(edx %>%
 plotByMovie <- ggplot()
 
 #Bar chart of the 10 most rated movies (x) versus the number of ratings for each movie (y)
-ratingByMovieBarPlot <- plotByMovie  + 
-  geom_bar(data= completeDataByMovie %>%
+ratingByMovieBarPlot <- completeDataByMovie  + 
+  geom_bar(data= dataByMovie %>%
              group_by(movieId),
            aes(x=reorder(title,-n),
                y=n),
@@ -221,7 +221,11 @@ genreAvgs <- edx %>%
 
 genreAvgs %>% qplot(b_g, geom ="histogram", bins = 10, data = ., color = I("black"))
 
+Drama_DramaCrime = dataByGenre %>% 
+  arrange(desc(n)) %>% 
+  filter(genres %in% c("Drama","Crime|Drama"))
 
+ratioDrama_DramaCrime = Drama_DramaCrime[1,]$n / Drama_DramaCrime[2,]$n
 #----------------------------------------------------------------------------------------------------------------
 #Extracting date and time of the rating
 
@@ -422,7 +426,148 @@ yearOfReleaseAvgs %>% qplot(b_yor, geom ="histogram", bins = 100, data = ., colo
                                  ymax = avg + 2*se)) + 
      geom_point() + 
      geom_errorbar()
+ 
+ 
+#-------------------------------------------------------------------------------------------------
+#exterior events
+ 
+#2001  Economic Growth and Tax Relief Reconciliation Act 
 
+#26/05/01 Bill to congress
+ Bill <- edx %>% filter(date < "2001-06-26" & 
+                          date >= "2001-04-26") %>% 
+   group_by(date) %>% 
+   summarize(n=n(), 
+             avg=mean(rating), 
+             sd=sd(rating)) %>% 
+   arrange(date)
+ 
+ Bill %>% ggplot(aes(x=date,
+                     y=avg,
+                     ymin=avg-sd, 
+                     ymax=avg+sd)) + 
+   geom_point() + 
+   geom_errorbar() + 
+   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+   geom_vline(xintercept = 31, 
+              color="red") + 
+   geom_hline(yintercept = mean(edx$rating), 
+              color="green") +
+   ylab("Ratings") + 
+   xlab("Date") +
+   ggtitle("Average ratings around the passing of the bill")
+ 
+ #07/06/01 Law
+ Law <- edx %>% filter(date < "2001-07-07" & 
+                          date >= "2001-05-07") %>% 
+   group_by(date) %>% 
+   summarize(n=n(), 
+             avg=mean(rating), 
+             sd=sd(rating)) %>% 
+   arrange(date)
+ 
+ Law %>% ggplot(aes(x=date,
+                     y=avg,
+                     ymin=avg-sd, 
+                     ymax=avg+sd)) + 
+   geom_point() + 
+   geom_errorbar() + 
+   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+   geom_vline(xintercept = 32, 
+              color="red") + 
+   geom_hline(yintercept = mean(edx$rating), 
+              color="green") +
+   ylab("Ratings") + 
+   xlab("Date") +
+   ggtitle("Average ratings around the passing of the law")
+
+ 
+ #9/11
+ 
+ NineOneOne <- edx %>% filter(date < "2001-10-11" & 
+                         date >= "2001-08-11") %>% 
+   group_by(date) %>% 
+   summarize(n=n(), 
+             avg=mean(rating), 
+             sd=sd(rating)) %>% 
+   arrange(date)
+ 
+ ratings911 <- NineOneOne %>% ggplot(aes(x=date,
+                    y=avg,
+                    ymin=avg-sd, 
+                    ymax=avg+sd)) + 
+   geom_point() + 
+   geom_errorbar() + 
+   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+   geom_vline(xintercept = 32, 
+              color="red") + 
+   geom_hline(yintercept = mean(edx$rating), 
+              color="green") +
+   ylab("Ratings") + 
+   xlab("Date") +
+   ggtitle("Average ratings around 9/11")
+ 
+ avgRatingByDay <- mean(edx %>% group_by(date) %>% summarize(n=n()) %>% pull(n))
+ 
+ n911 <- NineOneOne %>% ggplot(aes(x=date,
+                           y=n)) + 
+   geom_point() +  
+   geom_line(aes(group=1))+
+   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+   geom_hline(yintercept = avgRatingByDay, 
+              color="green") +
+   geom_vline(xintercept = 32, 
+              color="red") + 
+   ylab("Number of ratings") + 
+   xlab("Date") +
+   ggtitle("Number of ratings around 9/11")
+ 
+ ggarrange(ratings911, n911, nrow=2)
+ 
+ #2005-08-23 to 31 Hurricane Katrina
+ 
+ Katrina <- edx %>% filter(date < "2005-09-31" & 
+                                date >= "2005-07-23") %>% 
+   group_by(date) %>% 
+   summarize(n=n(), 
+             avg=mean(rating), 
+             sd=sd(rating)) %>% 
+   arrange(date)
+ 
+ ratingsKatrina <- Katrina %>% ggplot(aes(x=date,
+                                         y=avg,
+                                         ymin=avg-sd, 
+                                         ymax=avg+sd)) + 
+   geom_point() + 
+   geom_errorbar() + 
+   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+   geom_vline(xintercept = 32, 
+              color="red") + 
+   geom_vline(xintercept = 40, 
+              color="red") +
+   geom_hline(yintercept = mean(edx$rating), 
+              color="green") +
+   ylab("Ratings") + 
+   xlab("Date") +
+   ggtitle("Average ratings around Red Dawn")
+ 
+ nRatingsKatrina <- Katrina %>% ggplot(aes(x=date,
+                                   y=n)) + 
+   geom_point() +  
+   geom_line(aes(group=1))+
+   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+   geom_hline(yintercept = avgRatingByDay, 
+              color="green") +
+   geom_vline(xintercept = 32, 
+              color="red") + 
+   geom_vline(xintercept = 40, 
+              color="red") +
+   ylab("Number of ratings") + 
+   xlab("Date") +
+   ggtitle("Number of ratings around Red Dawb")
+ 
+ ggarrange(ratingsKatrina, nRatingsKatrina, nrow=2)
+  
 #-------------------------------------------------------------------------------------------------
 #genre analysis
 
@@ -528,24 +673,6 @@ train_edx <- rbind(train_edx,
                    removed)
 
 
-edx_movies <- edx %>% 
-  group_by(movieId) %>% 
-  summarize(
-    avg_rating=mean(rating), 
-    sd_rating=sd(rating), 
-    nrating=n()
-    )
-
-left_join(edx, 
-          edx_movies, 
-          by="movieId")
-
-mu <- mean(edx$rating) 
-
-movie_avgs <- edx %>% 
-  group_by(movieId) %>% 
-  summarize(b_i = mean(rating - mu))
-
 #determining best lambda
 lambdasRough <- seq(0,10,1)
 
@@ -575,17 +702,6 @@ functionRmses <- function(lambda){
     group_by(genres) %>%
     summarize(b_g = sum(rating - b_u - b_i - mu)/(n()+lambda))
   
-  #year of release effect
-  b_y <- train_edx %>% 
-    left_join(b_i, 
-              by="movieId") %>%
-    left_join(b_u, 
-              by="userId") %>%
-    left_join(b_g, 
-              by="genres") %>%
-    group_by(yearOfRelease) %>%
-    summarize(b_y = sum(rating - b_u - b_i - b_g - mu)/(n()+lambda))
-  
   predicted_ratings <- 
     test_edx %>% 
     left_join(b_i, 
@@ -594,9 +710,7 @@ functionRmses <- function(lambda){
               by = "userId") %>%
     left_join(b_g, 
               by="genres") %>%
-    left_join(b_y, 
-              by="yearOfRelease") %>%
-    mutate(pred = mu + b_i + b_u + b_g + b_y) %>%
+    mutate(pred = mu + b_i + b_u + b_g) %>%
     pull(pred)
   
   
@@ -608,7 +722,7 @@ rmsesRough <- sapply(lambdasRough, functionRmses)
 
 qplot(lambdasRough,rmsesRough)
 
-lambdaFine= seq(lambdasRough[which.min(rmsesRough)] -1, lambdasRough[which.min(rmsesRough)] + 1, 0.25)
+lambdaFine= seq(lambdasRough[which.min(rmsesRough)] -1, lambdasRough[which.min(rmsesRough)] + 1, 0.1)
 
 rmsesFine <- sapply(lambdaFine, functionRmses)
 
@@ -637,43 +751,6 @@ b_g <- train_edx %>%
   group_by(genres) %>%
   summarize(b_g = sum(rating - b_u - b_i - mu)/(n()+lambda))
 
-#year of release effect
-b_y <- train_edx %>% 
-  left_join(b_i, 
-            by="movieId") %>%
-  left_join(b_u, 
-            by="userId") %>%
-  left_join(b_g, 
-            by="genres") %>%
-  group_by(yearOfRelease) %>%
-  summarize(b_y = sum(rating - b_u - b_i - b_g - mu)/(n()+lambda))
-
-b_ng <- train_edx %>% 
-  left_join(b_i, 
-            by="movieId") %>%
-  left_join(b_u, 
-            by="userId") %>%
-  left_join(b_g, 
-            by="genres") %>%
-  left_join(b_y, 
-            by="yearOfRelease") %>%
-  group_by(ngenres) %>%
-  summarize(b_ng = sum(rating - b_u - b_i- b_y - b_g - mu)/(n()+lambda))
-
-b_yn <- train_edx %>% 
-  left_join(b_i, 
-            by="movieId") %>%
-  left_join(b_u, 
-            by="userId") %>%
-  left_join(b_g, 
-            by="genres") %>%
-  left_join(b_y, 
-            by="yearOfRelease") %>%
-  left_join(b_ng, 
-            by="ngenres") %>%
-  group_by(year) %>%
-  summarize(b_yn = sum(rating - b_u - b_i- b_y - b_g - b_ng - mu)/(n()+lambda))
-
 predicted_ratings <- 
   test_edx %>% 
   left_join(b_i, 
@@ -688,7 +765,7 @@ predicted_ratings <-
             by="ngenres") %>%
   left_join(b_yn, 
             by="year") %>%
-  mutate(pred = mu + b_i + b_u + b_g + b_ng + b_yn) %>%
+  mutate(pred = mu + b_i + b_u + b_g) %>%
   pull(pred)
 
 RMSE(predicted_ratings, test_edx$rating)

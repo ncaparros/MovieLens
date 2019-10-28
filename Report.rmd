@@ -1,8 +1,10 @@
 ---
 title: "MovieLens report"
 author: "Nina Caparros"
-date: "17/10/2019"
-output: pdf_document
+date: "`r Sys.Date()`"
+output: 
+  pdf_document:
+    number_sections: true
 ---
 
 ```{r setup, include=FALSE, echo=FALSE}
@@ -62,6 +64,11 @@ rm(dl, ratings, movies, test_index, temp, movielens, removed)
 ```
 
 ```{r Counts, include=FALSE}
+
+# Display whole integers, not scientific notation
+options("scipen"=100)
+
+
 #Number of rows and columns of the dataset provided by the edx dataset
 nrows <- nrow(edx)
 ncols <-ncol(edx)
@@ -72,11 +79,19 @@ number_of_users <- edx %>% group_by(userId) %>% summarize() %>% nrow()
 
 ```
 
-## Introduction
+\newpage
+\tableofcontents
+\newpage
 
-The following report is the analysis and results of the MovieLens Assessment of the Data Science Program of HarvardX, available on Edx (https://https://courses.edx.org/courses/course-v1:HarvardX+PH125.9x+2T2019/course/). The purpose of this project was to develop a movie recommendation system using a subset of the MovieLens dataset. MovieLenses datasets are available on grouplens.org and several sizes are at one's disposal. As required in the assessment, one was using the MovieLens 10M Dataset, which provides roughly ten millions (`r nrows`) of movie ratings. The initialization of the dataset was provided at the begining of the assessment by HarvardX. Each row of the dataset represented a rating, of one movie, by one user, at a certain time.
+# Introduction
 
-## Overview
+The following report is the analysis and results of the MovieLens Assessment of the Data Science Program of HarvardX, available on Edx (https://https://courses.edx.org/courses/course-v1:HarvardX+PH125.9x+2T2019/course/). 
+
+The purpose of this project was to develop a movie recommendation system using a subset of the MovieLens dataset. MovieLenses datasets are available on grouplens.org and several sizes are at one's disposal. As required in the assessment, one was using the MovieLens 10M Dataset, which provides roughly ten millions (`r nrows`) of movie ratings. The initialization of the dataset was provided at the begining of the assessment by HarvardX. Each row of the dataset represented a rating, of one movie, by one user, at a certain time.
+
+The goal of this assignment was to fit a model that would give a RMSE (Root Mean Square Estimate, see section 6.2. RMSE) of less than 0.8649.
+
+# Overview
 
 The dataset initialized was made of six columns as follow :
 
@@ -103,32 +118,27 @@ A first glance at the current dataset showed that :
 
 Before further investigation, one needed to clean those timestamp values and extract the release's year.
 
-### Data cleaning
+# Preparation
+
+## Data cleaning
 
 The first step one took was converting the `timestamp` column into a `date` (Year-Month-Day) and `time` (Hour:Minute) columns. The original `timestamp` column was removed. This step allowed one to analyse datas by date and hour of the day. The validation dataset had been cleaned in the same way.
 
 One wondered if the time of the day, the day of the month, the month of the year, or even the year were influencing the ratings of the users. Could the date influence the rating of one given user ? Could the rating of that particular user change depending of the period ?
 
-It seemed also appropriate to extract the details of the date (as year, month and day) for further analysis.
 
 ```{r Converting dates, include=FALSE}
 edx <- edx %>% 
   mutate(
     date = format(as_datetime(timestamp), format="%Y-%m-%d"), 
-    time=format(as_datetime(timestamp), format="%H:%M"),
-    year=year(date),
-    month=month(date),
-    day=day(date)) %>% 
+    time=format(as_datetime(timestamp), format="%H:%M")) %>% 
   select(-timestamp)
 
 
 validation <- validation %>% 
   mutate(
     date = format(as_datetime(timestamp), format="%Y-%m-%d"), 
-    time=format(as_datetime(timestamp), format="%H:%M"),
-     year=year(date),
-    month=month(date),
-    day=day(date)) %>% 
+    time=format(as_datetime(timestamp), format="%H:%M")) %>% 
   select(-timestamp)
 
 ```
@@ -151,17 +161,20 @@ validation <- validation %>% mutate(
 
 The cleaned dataset looked like : 
 
-```{r Preview of converted dates, include=FALSE}
+```{r Preview of converted dates, echo=FALSE}
 head(edx)
 ```
 
-### Movies
+# Analysis
 
-The `edx` dataset provided ratings for `number_of_movies` different movies.
+## Movies
 
-```{r Movies, include=FALSE}
-# Display whole integers, not scientific notation
-options("scipen"=100)
+The `edx` dataset provided ratings for `r number_of_movies` different movies.
+
+```{r Movies, echo=FALSE}
+
+#average of ratings
+mu_rating = mean(edx$rating)
 
 # Movie ratings analysis : top 10 reviewed movies
 dataByMovie <- edx %>% 
@@ -180,12 +193,12 @@ plotByMovie <- ggplot()
 
 #Bar chart of the 10 most rated movies (x) versus the number of ratings for each movie (y)
 ratingByMovieBarPlot <- plotByMovie  + 
-  geom_bar(data= dataByMovie %>%
+  geom_bar(data= completeDataByMovie %>%
              group_by(movieId),
            aes(x=reorder(title,-n),
                y=n),
            stat="identity") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+  theme(axis.text.x = element_blank()) + 
   ylab("Number of ratings") + 
   xlab("Movies (top 10 rated)") + 
   coord_cartesian(xlim =c(1, 10))
@@ -198,25 +211,27 @@ MovieAvgRatingBoxplot <- plotByMovie +
       x=reorder(title,-n),
       y=rating)
     ) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+  theme(axis.text.x = element_text(angle = 15, hjust = 1)) + 
   ylab("Ratings") + 
   xlab("Movies (top 10 rated)") + 
-  coord_cartesian(xlim =c(1, 10))
+  coord_cartesian(xlim =c(1, 10), ylim=c(0,5))
 
 #Ploting the barchart and the boxplot side by side
-ggarrange(ratingByMovieBarPlot,MovieAvgRatingBoxplot)
+egg::ggarrange(ratingByMovieBarPlot,MovieAvgRatingBoxplot, ncol=1)
+
 
 ```
 
 It appeared that the most rated movies were not necessarily the best rated movies, and the distribution of the ratings varied substantially. For instance, in the right plot, the first most rated movie (Pulp Fiction) has 50% of it's ratings between 4 and 5, with a median of 4.5, while Jurassic Park, the fourth most rated movie has 50% of it's ratings between 3 and 4, and 25% of it's ratings equal to 4. The Shawshank Redemption (fifth most rated movie) even has 25% of it's ratings equal to 5.
 
-The movie bias was obvious and was to be introduced later in the Effects section.
+The movie bias was obvious and was to be introduced later in the 5.2 Effects section.
 
-### Users
+## Users
 
 Each movie rating was associated to a user. Users could rate one or several movies, and the following charts shows the number of ratings, for the ten most prolific raters, and the ratings of those users.
 
-```{r Users - number of ratings, include=FALSE}
+```{r Users, echo=FALSE}
+
 #User ratings analysis : 10 most raters
 dataByUser <- edx %>% 
   group_by(userId) %>% 
@@ -257,13 +272,13 @@ ggarrange(userRatingsBarPlot,UserAvgRatingBoxplot)
 
 ```
 
-It was clear that the number of ratings did not affect the ratings by user. Some users tend to be more severe than others, and some tend to be give high ratings more easily. This induced a user bias that was described and used in the Effect section.
+It was clear that the number of ratings did not affect the ratings by user. Some users tend to be more severe than others, and some tend to be give high ratings more easily. This induced a user bias that was described and used in the 5.2 Effect section.
 
-### Genre
+## Genre
 
 Since we all tend to appreciate some genres more than others, it was logical to analyse the ratings depending of the genre. The following plots showed respectively the number of ratings versus the genre, and the repartition of the ratings by genre, for the 10 most reviewed genres.
 
-```{r Genre, inclue=FALSE}
+```{r Genre, echo=FALSE}
 
 dataByGenre <- edx %>% 
   group_by(genres) %>% 
@@ -298,31 +313,29 @@ UserAvgRatingBoxplot <- genrePlot +
 
 ggarrange(genreRatingsBarPlot,UserAvgRatingBoxplot)
 
-#genre effect
-genreAvgs <- edx %>%
-  group_by(genres) %>%
-  summarize(b_g = mean(rating - mu_rating))
+Drama_DramaCrime = dataByGenre %>% 
+  arrange(desc(n)) %>% 
+  filter(genres %in% c("Drama","Crime|Drama"))
 
-genreAvgs %>% qplot(b_g, geom ="histogram", bins = 10, data = ., color = I("black"))
-
-Drama_DramaCrime = dataByGenre %>% arrange(desc(n)) %>% filter(genres %in% c("Drama","Crime|Drama"))
-
-ratioDrama_DramaCrime = Drama_DramaCrime[1,]$n / Drama_DramaCrime[2,]$n
-
+ratioDrama_DramaCrime = round(Drama_DramaCrime[1,]$n / Drama_DramaCrime[2,]$n,2)
 ```
 
-It appeared that there is no clear relationship between the number of ratings and the ratings. The most reviewed genre is Drama (25% of it's ratings between 4 and 4.5), but it seemed to be rated more harshly than the combination Crime/Drama (25% of it's ratings between 4 and 5). Knowing that Drama alone has been reviewed `r ratioDrama_DramaCrime` times more than Drama/Crime.
+It appeared that there was no clear relationship between the number of ratings and the ratings. The most reviewed genre is Drama (25% of it's ratings between 4 and 4.5), but it seemed to be rated more harshly than the combination Crime/Drama (25% of it's ratings between 4 and 5). Knowing that Drama alone had been reviewed `r ratioDrama_DramaCrime` times more than Drama/Crime.
 
 Comedy, which was the second most reviewed genre, very close to Drama, has a median rating of only 3, with a rather large interquartile range (25% between 3 and 4), but combined with at least another genre (Drama, or Drama and Romance for example), it's median rating went up (25% of it's rating are equal to 4 for the two said combination).
 
-These observations led one to wonder about two biases : genre and the number of genre of each movie. These were to be detailled in the Effects section.
+These observations led one to wonder about two biases : genre and the number of genre of each movie. The genre bias was to be detailled in the 5.2 Effects section.
 
-#### Primary genres
+### Primary genres
 
 ```{r Extracting primary genre, include=FALSE}
 #Extracting primary genres
 primarygenres <- edx %>% 
   filter(!str_detect(genres,"[|]")) %>% 
+  pull(genres) %>% 
+  unique()
+
+allGenres <- edx %>% 
   pull(genres) %>% 
   unique()
 
@@ -335,64 +348,508 @@ genreDatas <- sapply(c(1:length(primarygenres)), function(index){
 
 colnames(genreDatas) = primarygenres
 
+```
+
+The genres were classified as a combination of `r length(primarygenres)` primary genres, with a total of `r length(allGenres)` distincts combinations. One approach could be to extract for each movie all the genres related to that movie, as, for instance, `r length(primarygenres)` columns as `isDrama`, `isComedy`, ... and then grouping the movies `r length(primarygenres)` times, with each parameter. This solution, though explored, had not been kept, as it required `r length(primarygenres)` `group_by`. Instead, one chose to use the `r length(primarygenres)` combinations, as a single `group_by(genres)`. This method was indeed less precise, but required a significantly less amount of time to compute. If one had to do the more precise prediction, the extraction of the genres would have been chosen.
+
+## Year of release
+
+Intuitively, it was easy to figure that the year the movie was released influenced on the rating of that movie. Some users were 90' movie fans, some prefered the recent ones, some, the old ones, and since trends come and go, time had an effect on the rating of the movie. Some masterpieces became outmoded, and some never grew old. 
+
+The following plots showed the number of ratings, for the ten most prolific years in reviewed movies, and the ten least reviewed years, and the repartition of the ratings.
+
+```{r year of release, echo=FALSE}
+dataYearOfReleaseTop <- edx %>% 
+  group_by(yearOfRelease) %>% 
+  summarize(n=n()) %>%
+  top_n(10,n)
+
+dataYearOfReleaseBottom <- edx %>% 
+  group_by(yearOfRelease) %>% 
+  summarize(n=n()) %>%
+  top_n(10,-n)
+
+
+completeDataByYearOfReleaseTop <- left_join(edx %>% 
+                             filter(yearOfRelease %in% dataYearOfReleaseTop$yearOfRelease),
+                           dataYearOfReleaseTop,
+                           by="yearOfRelease") 
+
+completeDataByYearOfReleaseBot <- left_join(edx %>% 
+                             filter(yearOfRelease %in% dataYearOfReleaseBottom$yearOfRelease),
+                           dataYearOfReleaseBottom,
+                           by="yearOfRelease")
+
+completeDataByYearOfRelease = rbind(completeDataByYearOfReleaseTop, completeDataByYearOfReleaseBot)
+
+plotYearOfRelease <- ggplot()
+
+yearOfReleaseRatingsBarPlot <- plotYearOfRelease  + 
+  geom_bar(data=completeDataByYearOfRelease,
+           aes(x=reorder(yearOfRelease,-n), 
+               y=n),
+           stat="identity") +
+  theme(axis.text.x = element_blank()) + 
+  ylab("Number of ratings")+ 
+  xlab("Years (top 10 rated)")
+
+YearOfReleaseAvgRatingBoxplot <- plotYearOfRelease + 
+  geom_boxplot(
+    data=completeDataByYearOfRelease
+    ,aes(x=reorder(yearOfRelease,-n),
+         y=rating)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+  ylab("Ratings") + 
+  xlab("Years (top 10 rated)")
+
+egg::ggarrange(yearOfReleaseRatingsBarPlot,YearOfReleaseAvgRatingBoxplot, ncol=1)
 
 ```
 
+A slight bias, depending of the year of release could be seen, even if it was not as strong as expected. The more ratings, the more the repartion of those ratings seemed to be similar : median of 3.5, and 50% of the ratings between 3 and 4.
+
+## Date and time
+
+Several questions about the date and time were raised :
+
+* Could the ratings of a user for the same movie be different depending of the period ?
+* Could the overall ratings be influenced by the year, month or day ?
+* Could the ratings for a same movie evolve with time ?
+* Could the ratings of a user evolve with time ?
+
+Considering our own experiences, we could intuitively say yes to these interrogations. 
+
+* We sometimes liked a specific movie more or less as our age, situation, mood, and tastes evolve.
+* Our liking could be influenced by :
++ The day of the week (weekend), or the month (holiday), the season (Christmas movies in winter for example). 
++ We could be harsher in our ratings based on exterior events (crisis, war, attack,...), or in contrast, more lenient (social win, end of said crisis or war,...). This was a theory to be tried out (see 4.5.1 Exterior events section).
+* Some movies trending at a specific period were liked less and less with time, and on the other hand, some movies needed time to be appreciated.
+* We could evolve to become more critical or more lenient with time, after watching enough movies.
+
+### Exterior events
+
+One was considering a comparison between the month preceding a said event, and the following month, trying to find out if that specific event could alter the movie ratings given.
+
+#### 9/11
+
+On 11 September 2001, four coordinated terrorist attacks stroke the United States. Two planes crashed into the Twin Towers of the World Trade Center, and two crashed into the Pentagon. Even though terrorist attacks happened all around the world, it was the first one to happen on American soil. The horror of the war deeply affected Americans.
+
+The following plots showed the average ratings, and the number of ratings from 2001-08-11 to 2001-10-10, one month before and after the 9/11 attacks. The vertical red lines represented the 2001-09-11, and the horizontal green lines the overall averages, respectively ratings and number of ratings.  
+
+```{r 911, echo=FALSE}
+ NineOneOne <- edx %>% filter(date < "2001-10-11" & 
+                         date >= "2001-08-11") %>% 
+   group_by(date) %>% 
+   summarize(n=n(), 
+             avg=mean(rating), 
+             sd=sd(rating)) %>% 
+   arrange(date)
+ 
+ ratings911 <- NineOneOne %>% ggplot(aes(x=date,
+                    y=avg,
+                    ymin=avg-sd, 
+                    ymax=avg+sd)) + 
+   geom_point() + 
+   geom_errorbar() + 
+   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+   geom_vline(xintercept = 32, 
+              color="red") + 
+   geom_hline(yintercept = mean(edx$rating), 
+              color="green") +
+   ylab("Ratings") + 
+   xlab("Date") +
+   ggtitle("Average ratings around 9/11")
+ 
+ avgRatingByDay <- mean(edx %>% group_by(date) %>% summarize(n=n()) %>% pull(n))
+ 
+ n911 <- NineOneOne %>% ggplot(aes(x=date,
+                           y=n)) + 
+   geom_point() +  
+   geom_line(aes(group=1))+
+   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+   geom_hline(yintercept = avgRatingByDay, 
+              color="green") +
+   geom_vline(xintercept = 32, 
+              color="red") + 
+   ylab("Number of ratings") + 
+   xlab("Date") +
+   ggtitle("Number of ratings around 9/11")
+ 
+ ggarrange(ratings911, n911, nrow=2)
+
+```
+
+No specific pattern was to be seen, yet it was noticeable that on the day of the attacks, the number of reviews was much higher than the average. This was surprising, it could have been supposed that on a tuesday, whith an event that traumatizing, people would have been less prone to watch movies.
+
+The theories that emerged were :
+
+* The users were not necessarily Americans, therefore less concerned by this event
+* The effects of this event were not the one expected (higher number of reviews)
+* The events may not influence the ratings
+* The timelapse chosen was to short to observe a changing in ratings
+
+To confirm that events do not affect users ratings, one decided to analyse another event, a natural catastrophe, as the Hurricane Katrina, which devastated several states in America.
+
+#### 2005 Hurricane Katrina
+
+From August 23 to August 31 of 2005, a category 5 hurricane made landfall on Florida, Gulf Coast, Louisiana, Mississipi. It was the third-most intense Atlantic hurricane at the time, and the damages reached $125 billion. 1,245 to 1,836 (estimations) people lost their lives to the hurricane, or the aftermath. People were evacuated, power was cut, cities were flooded and houses destroyed. It could have been expected that, in these conditions, the number of ratings would have drastically diminished.
+
+The following plots showed the average ratings and the number of ratings one month before through one month after hurricane Katrina. The horizontal green lines represented the overall averages, and the two vertical red lines delimited the duration of the hurricane.
+
+```{r Hurricane Katrina, echo=FALSE}
+ Katrina <- edx %>% filter(date < "2005-09-31" & 
+                                date >= "2005-07-23") %>% 
+   group_by(date) %>% 
+   summarize(n=n(), 
+             avg=mean(rating), 
+             sd=sd(rating)) %>% 
+   arrange(date)
+ 
+ ratingsKatrina <- Katrina %>% ggplot(aes(x=date,
+                                         y=avg,
+                                         ymin=avg-sd, 
+                                         ymax=avg+sd)) + 
+   geom_point() + 
+   geom_errorbar() + 
+   theme(axis.text.x = element_blank()) + 
+   geom_vline(xintercept = 32, 
+              color="red") + 
+   geom_vline(xintercept = 40, 
+              color="red") +
+   geom_hline(yintercept = mean(edx$rating), 
+              color="green") +
+   ylab("Ratings") + 
+   xlab("Date") +
+   ggtitle("Average ratings around Hurrican Katrina")
+ 
+ nRatingsKatrina <- Katrina %>% ggplot(aes(x=date,
+                                   y=n)) + 
+   geom_point() +  
+   geom_line(aes(group=1))+
+   theme(axis.text.x = element_text(angle = 45, hjust = 2)) + 
+   geom_hline(yintercept = avgRatingByDay, 
+              color="green") +
+   geom_vline(xintercept = 32, 
+              color="red") + 
+   geom_vline(xintercept = 40, 
+              color="red") +
+   ylab("Number of ratings") + 
+   xlab("Date") +
+   ggtitle("Number of ratings around Hurrican Katrina")
+ 
+ ggarrange(ratingsKatrina, nRatingsKatrina, nrow=2)
+```
+
+Surprinsigly, there was no change in the average ratings following the landfall of the hurricane. The number of ratings did not decrease that much neither, a significant high rating could even be observed during the catastrophe.
+
+It seemed the exterior event did not affect the ratings of the users. Consequently, there was no point trying to use the date of the rating in the prediction algorithm.
+
+# Methods
 
 
-### Year of release
-
-### Date and time
-
-## Executive summary 
-
-section that describes the dataset and summarizes the goal of the project and key steps that were performed
-
-## Methods/analysis section that explains the process and techniques used, such as data cleaning, data exploration and visualization, any insights gained, and your modeling approach
-
-
-
-### Determining the model
+## Determining the model
 
 Considering the rather large dataset at one's disposal, training algorithms as linear models cannot be used. One chose instead to fit the model :
 
-$Y_{u,i} = \mu + \sum_{u,i} b_{n} + \varepsilon_{u,i}$
+$$Y_{u,i,...} = \mu + \sum_{n=u,i,...} b_{n} + \varepsilon_{u,i,...}$$
 
-Where $Y$ is the rating prediction knowing all the parameters $u,i$, $\mu$ the average rating, and $b$ the effects for each parameter. $\varepsilon$ represents the error, or the residual. Since it was not possible to compute it, one was considering it as in the perfect scenario, which means $\varepsilon$ equal to zero.
+Where $Y$ is the rating prediction knowing all the parameters $u,i,...$, $\mu$ the average rating, and $b$ the effects for each parameter. $\varepsilon$ represents the error, or the residual. Since it was not possible to compute it, one was considering it as in the perfect scenario, which means $\varepsilon$ equal to zero.
 
-The `b` were regularized using the penalized least squares, using a penalty term $\lambda$, which minimizes the residual sum of squares plus that penalty term, as:
+This meant "the predicted rating for user `u` of the movie `i` is the average rating plus the sum of `n` biases for user `u` of the movie `i` plus the error for user `u` of the movie `i`".
 
-$PLSE = \frac{1}{N} \sum_{u,i}(y_{u,i} - \mu - b_{i})^2 + \lambda \sum(b_{i})^2$
+This approach has a major inconvenient : it does not do well for small number of ratings. To regularize the biases (also called effects) `b`, a penalty term $\lambda$ is introduced.
 
-### Effects
+The penalty term $\lambda$ minimizes the residual sum of squares plus that penalty term, known as the penalized least squares equation, as:
 
-#### Movie effect
+$$PLSE = \frac{1}{N} \sum_{u,i,...}(y_{u,i,...} - \mu - \sum{b_{u,i,...}})^2 + \lambda (\sum(b_{i})^2 + \sum{(b_u})^2 + \sum{(b_{...})^2})$$
 
-```{r Movie effect, include=FALSE}
+## Effects
+
+In order to fit the model described, one considered the biases analized previously :
+* Movie bias
+* User bias
+* Genre bias
+
+### Movie effect
+
+A movie bias `b_i` was defined for each movie, using a `group_by(movieId)`, as follow :
+
+$$b_i = \frac{1}{N}\sum{(r_{i}-\mu)} $$
+
+Where $N$ was the number of ratings, $r_{i}$ was each rating of movie $i$ and $\mu$ the overall average rating.
+
+The following histogram showed the distribution of the $b_{i}$.
+
+```{r Movie effect, echo=FALSE}
 #average of ratings
 mu_rating = mean(edx$rating)
 
 #Movie effect
 movieAvgs <- edx %>%
   group_by(movieId) %>%
-  summarize(b_m = mean(rating - mu_rating))
+  summarize(b_i = mean(rating - mu_rating))
 
-movieAvgs %>% qplot(b_m, geom ="histogram", bins = 10, data = ., color = I("black"))
+movieAvgs %>% qplot(b_i, geom ="histogram", bins = 10, data = ., color = I("black"))
 
 ```
 
-### Parameters
+This bias allowed the model to take into account the singularity of each movie, not only considering the overall average. The model introduced "good" and "bad" movies.
 
-#### Creating training and test set
+A positive `b_i` meant the movie `i` has an average rating above the overall average of `r mu_rating`. A negative `b_i` meant the movie `i` has an average rating below the overall average.
 
-#### Picking penalty term
+The value of $b_i$ that minimized the penalized least squares equation was :
 
-## Results
+$$\hat{b}_i(\lambda) = \frac{1}{\lambda + n_i}\sum_{u=1}^{n_i}(Y_{u,i}-\hat{\mu})$$
 
-### Final model
+### User effect
 
-###RMSE
+Simarly  user bias `b_u` was defined for each movie, using a `group_by(userId)`, as follow :
 
-## Conclusion
+$$b_u = \frac{1}{N}\sum{(r_{u}-\mu)} $$
 
-##Sources and references
+Where $N$ was the number of ratings, $r_{u}$ was each rating from user $u$ and $\mu$ the overall average rating.
+
+The following histogram showed the distribution of the $b_{u}$.
+
+```{r User effect, echo=FALSE}
+userAvgs <- edx %>%
+  group_by(userId) %>%
+  summarize(b_u = mean(rating - mu_rating))
+
+userAvgs %>% qplot(b_u, geom ="histogram", bins = 10, data = ., color = I("black"))
+```
+
+This bias allowed the model to take into account the singularity of each user, not only considering the overall average. The model introduced "cranky" and "lenient" users.
+
+A positive `b_u` meant the movie `u` has an average rating above the overall average of `r mu_rating`. A negative `b_u` meant the movie `u` has an average rating below the overall average.
+
+The value of $b_u$ that minimized the penalized least squares equation was :
+
+$$\hat{b}_u(\lambda) = \frac{1}{\lambda + n_u}\sum_{u=1}^{n_u}(Y_{u,i}-\hat{\mu} - \hat{b}_i)$$
+
+### Genre effect
+
+A gender bias `b_g` was defined for each genre, using a `group_by(genres)`, as follow :
+
+$$b_g = \frac{1}{N}\sum{(r_{g}-\mu)} $$
+
+Where $N$ was the number of ratings, $r_{g}$ was each rating for genre $g$ and $\mu$ the overall average rating.
+
+The following histogram showed the distribution of the $b_{g}$.
+
+```{r genre effect, echo=FALSE}
+genreAvgs <- edx %>%
+  group_by(genres) %>%
+  summarize(b_g = mean(rating - mu_rating))
+
+genreAvgs %>% qplot(b_g, geom ="histogram", bins = 10, data = ., color = I("black"))
+```
+
+This bias allowed the model to take into account the singularity of each genre, not only considering the overall average. The model introduced the concept of "popular" and "unpopular" genres.
+
+A positive $b_g$ meant the genre $g$ has an average rating above the overall average of `r mu_rating`. A negative $b_g$ meant the genre $g$ has an average rating below the overall average.
+
+The value of $b_g$ that minimized the penalized least squares equation was :
+
+$$\hat{b}_g(\lambda) = \frac{1}{\lambda + n_g}\sum_{u=1}^{n_g}(Y_{u,i}-\hat{\mu} - \hat{b}_i - \hat{b}_u)$$
+
+### Others
+
+Other bias were analyzed, as the year of release (see section Analysis), the date of the rating, and the number of genres of the movie. The results were not significant enough and thus not reported here.
+
+## Cross-validation
+
+In order to pick the best fitted penalty term $\lambda$, one chose to use cross-validation. A training and testing set were created from the edx dataset, using the `createDataPartition` function. 
+
+```{r Creating training and testing set, include=FALSE}
+#Creation of a train set and a test set from edx dataset for cross-validation
+
+test_edx_index <-  createDataPartition(y = edx$rating, 
+                                       times = 1, 
+                                       p = 0.1, 
+                                       list = FALSE)
+train_edx <- edx[-test_edx_index,]
+
+temp_test <- edx[test_edx_index,]
+
+# Make sure userId and movieId in validation set are also in edx set
+
+test_edx <- temp_test %>% 
+  semi_join(train_edx, 
+            by = "movieId") %>%
+  semi_join(train_edx, 
+            by = "userId")
+
+# Add rows removed from validation set back into edx set
+
+removed <- anti_join(temp_test, 
+                     test_edx)
+train_edx <- rbind(train_edx, 
+                   removed)
+
+```
+
+The training set `train_edx` contained `r nrow(train_edx)` rows, and the testing set `test_edx`, `r nrow(test_edx)`.
+
+## Picking penalty term
+
+The model described in the previous sections was transcribed into a function `functionRmses` which took a parameter `lambda`, computed the movie effect `b_m`, the user effect `b_u`, and the genre effect `b_g`, all regularized by `lambda` on the training set, and then predicted the ratings on the testing set. The function returned the RMSE (Root Mean Square Error, the standard deviation of the residuals) of the predictions made, and the actual ratings of the testing set.
+
+In order to fasten the computing of the $\lambda s$, two sets of $\lambda s$ were made. The first one, `lambdasRough`, was a sequence from 0 to 10 with an increment of 1. The function `functionRmses` was then used to compute the RMSEs of these rough lambdas using the function `sapply`. The minimum of the rough lambdas was kept, called `minRoughLambda`, and a second sequence, `lambdasFine`, from `minRoughLambda -1`, to `minRoughLambda +1`, with an increment of 0.1 was applied to the function `functionRmses`. The minimum of this second sequence was kept for the final model.
+
+```{r Rough lambdas, echo=FALSE}
+lambdasRough <- seq(0,10,1)
+
+mu <- mean(train_edx$rating)
+
+functionRmses <- function(lambda){
+  
+  
+  #movie effect
+  b_i <- train_edx %>% 
+    group_by(movieId) %>% 
+    summarize(b_i = sum(rating - mu)/(n()+lambda)) 
+  
+  #user effect
+  b_u <- train_edx %>% 
+    left_join(b_i, 
+              by="movieId") %>%
+    group_by(userId) %>%
+    summarize(b_u = sum(rating - b_i - mu)/(n()+lambda))
+  
+  #genre effect
+  b_g <- train_edx %>% 
+    left_join(b_i, 
+              by="movieId") %>%
+    left_join(b_u, 
+              by="userId") %>%
+    group_by(genres) %>%
+    summarize(b_g = sum(rating - b_u - b_i - mu)/(n()+lambda))
+  
+  predicted_ratings <- 
+    test_edx %>% 
+    left_join(b_i, 
+              by = "movieId") %>%
+    left_join(b_u, 
+              by = "userId") %>%
+    left_join(b_g, 
+              by="genres") %>%
+    mutate(pred = mu + b_i + b_u + b_g) %>%
+    pull(pred)
+  
+  
+  return(RMSE(predicted_ratings, test_edx$rating))
+  
+}
+
+rmsesRough <- sapply(lambdasRough, functionRmses)
+
+plotRough <- qplot(lambdasRough,rmsesRough)
+
+minRoughLambda <- lambdasRough[which.min(rmsesRough)]
+
+lambdasFine <- seq(minRoughLambda-1,minRoughLambda+1,0.1)
+
+rmsesFine <- sapply(lambdasFine, functionRmses)
+
+plotFine <- qplot(lambdasFine,rmsesFine)
+
+lambda <- lambdasFine[which.min(rmsesFine)]
+
+ggarrange(plotRough, plotFine, ncol=1)
+```
+
+The $\lambda$ which minimized the penalized least square equation was : `r lambda`.
+
+# Results
+
+## Final model
+
+The final model was :
+$$ Y_{u,i,g} = \mu + b_i + b_u + b_g $$
+$$ Y_{u,i,g} = \mu + \frac{1}{N_i+\lambda}\sum(r_i - \mu) +\frac{1}{N_u+\lambda}\sum(r_u - \mu) + \frac{1}{N_g+\lambda}\sum(r_g - \mu) $$
+
+## RMSE
+
+It was time to apply the model to the edx and validation datasets.
+
+```{r final RMSE}
+
+mu <- mean(edx$rating)
+
+b_i <- edx %>% 
+  group_by(movieId) %>% 
+  summarize(b_i = sum(rating - mu)/(n()+lambda), n_i = n()) 
+
+#user effect
+b_u <- edx %>% 
+  left_join(b_i, 
+            by="movieId") %>%
+  group_by(userId) %>%
+  summarize(b_u = sum(rating - b_i - mu)/(n()+lambda))
+
+#genre effect
+b_g <- edx %>% 
+  left_join(b_i, 
+            by="movieId") %>%
+  left_join(b_u, 
+            by="userId") %>%
+  group_by(genres) %>%
+  summarize(b_g = sum(rating - b_u - b_i - mu)/(n()+lambda))
+
+predicted_ratings <- 
+  validation %>% 
+  left_join(b_i, 
+            by = "movieId") %>%
+  left_join(b_u, 
+            by = "userId") %>%
+  left_join(b_g, 
+            by="genres") %>%
+  mutate(pred = mu + b_i + b_u + b_g) %>%
+  pull(pred)
+
+rmse <- RMSE(predicted_ratings, validation$rating)
+```
+The final RMSE was `r rmse`, which was less than 0.8649, thus the goal had been reached.
+
+# Conclusion
+
+Even though the RMSE goal has been reached, the model described here was far from precise. 
+First of all, the predicted ratings were (almost) never "real" values, as 0.5, 1, 1.5, ..., 4.5, 5. They were approximations implying the accuracy ($\frac{\sum(ratingPredictions == ratingValidation)}{nrow(Validation)}$) is equal to 0. It could have been more demonstrative to round the predictions to fit the possible rating values.
+
+```{r Rounding predictions, echo=FALSE}
+rounded_predicted_ratings <- sapply(c(1:length(predicted_ratings)), function(i){
+  rating = predicted_ratings[i]
+  
+  if(round(rating,3)%%1<=0.25){
+  floor(rating)
+}
+else if(round(rating,3)%%1<0.75){
+  floor(rating) + 0.5
+}
+else{
+  floor(rating) + 1
+}
+})
+
+accuracy <- sum(rounded_predicted_ratings==validation$rating)/nrow(validation)
+```
+
+Rounding up the predicted ratings, the accuracy was `r accuracy`, which was very low. Yet, since this was a recommendation system, and not a prediction system, the accuracy was not that important. The system had to offer to a user movies he or she could enjoy. It did not matter if the user rates the movie 0.5 more or less.
+
+Another problem in the model was the fact that even if some users appreciated, in general, this genre of movie, it did not necessarilly mean they would enjoy all the movies of that particular genre. 
+
+Plus, some users appreciated some movies for their actors and actresses, independently of the genre, and this was not represented in the model.
+
+Other recommendation systems could have been used, as Single Value Decomposition or Principal Component Analysis, but it required additionnal packages as `irlba`, `bigalgebra` and `bigmemory`. Since the RMSE goal had been hit, this approach was not analysed in this report.
+
+
+# Sources and references
+
+https://en.wikipedia.org/wiki/Timeline_of_United_States_history_(1990%E2%80%932009)
+
+https://en.wikipedia.org/wiki/Economic_Growth_and_Tax_Relief_Reconciliation_Act_of_2001
+
+https://en.wikipedia.org/wiki/September_11_attacks
+
+https://en.wikipedia.org/wiki/Hurricane_Katrina
