@@ -25,6 +25,7 @@ if(!require(lubridate)) install.packages("lubridate", repos = "http://cran.us.r-
 if(!require(dplyr)) install.packages("dplyr", repos = "http://cran.us.r-project.org")
 if(!require(stringr)) install.packages("stringr", repos = "http://cran.us.r-project.org")
 if(!require(ggpubr)) install.packages("ggpubr", repos = "http://cran.us.r-project.org")
+if(!require(egg)) install.packages("ggpubr", repos = "http://cran.us.r-project.org")
 
 dl <- tempfile()
 download.file("http://files.grouplens.org/datasets/movielens/ml-10m.zip", dl)
@@ -111,16 +112,23 @@ The dataset initialized was made of six columns as follow :
 | title	| `r class(edx$title)` | `r number_of_movies` |Not relevant 	|  Not relevant 	| Not relevant | Not relevant | 
 | genres	| `r class(edx$genres)`	| `r length(edx %>% pull(genres)%>% unique())`  |Not relevant 	|  Not relevant 	| Not relevant | Not relevant | 
 
+
 A first glance at the current dataset showed that : 
 
 * The timestamp information clearly appeared uninterpretable. 
 * The information of the year of release was contained in the title column.
 
-Before further investigation, one needed to clean those timestamp values and extract the release's year.
-
 # Preparation
 
+Before further investigation, one needed to clean those timestamp values and extract the release's year.
+
 ## Data cleaning
+
+The dataset edx looked like :
+
+```{r Preview of dataset, echo=FALSE}
+head(edx)
+```
 
 The first step one took was converting the `timestamp` column into a `date` (Year-Month-Day) and `time` (Hour:Minute) columns. The original `timestamp` column was removed. This step allowed one to analyse datas by date and hour of the day. The validation dataset had been cleaned in the same way.
 
@@ -167,6 +175,8 @@ head(edx)
 
 # Analysis
 
+This section described the insights one got of the data. Showed correlations and effects which were to be kept for our model, or the ones rejected.
+
 ## Movies
 
 The `edx` dataset provided ratings for `r number_of_movies` different movies.
@@ -197,7 +207,9 @@ ratingByMovieBarPlot <- plotByMovie  +
              group_by(movieId),
            aes(x=reorder(title,-n),
                y=n),
-           stat="identity") +
+           stat="identity", 
+      fill = "#C4961A",
+      color = "#FFDB6D") +
   theme(axis.text.x = element_blank()) + 
   ylab("Number of ratings") + 
   xlab("Movies (top 10 rated)") + 
@@ -209,8 +221,9 @@ MovieAvgRatingBoxplot <- plotByMovie +
     data=completeDataByMovie
     ,aes(
       x=reorder(title,-n),
-      y=rating)
-    ) +
+      y=rating),
+      fill = "#FFDB6D", 
+      color = "#C4961A") +
   theme(axis.text.x = element_text(angle = 15, hjust = 1)) + 
   ylab("Ratings") + 
   xlab("Movies (top 10 rated)") + 
@@ -253,7 +266,9 @@ userRatingsBarPlot <- userPlot  +
              completeDataByUser %>% group_by(userId),
            aes(x = reorder(userId,-n),
                y = n),
-           stat="identity") +
+           stat="identity", 
+      fill = "#0072B2",
+      color = "#56B4E9") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
   ylab("Number of ratings") + 
   xlab("Users (top 10 raters)") + 
@@ -262,7 +277,9 @@ userRatingsBarPlot <- userPlot  +
 UserAvgRatingBoxplot <- userPlot + 
   geom_boxplot(data=completeDataByUser
     ,aes(x=reorder(userId,-n),
-         y=rating)) +
+         y=rating),
+      fill = "#56B4E9", 
+      color = "#0072B2") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
   ylab("Ratings") + 
   xlab("Users (top 10 raters)") + 
@@ -295,7 +312,9 @@ genreRatingsBarPlot <- genrePlot  +
   geom_bar(data=dataByGenre,
            aes(x=reorder(genres,-n), 
                y=n),
-           stat="identity") +
+           stat="identity",
+      fill = "#C3D7A4", 
+      color = "#52854C") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
   ylab("Number of ratings") + 
   xlab("Genres (top 10 rated)") + 
@@ -305,7 +324,9 @@ UserAvgRatingBoxplot <- genrePlot +
   geom_boxplot(
     data=completeDataByGenre,
     aes(x=reorder(genres,-n),
-        y=rating)) +
+        y=rating),
+      fill = "#C3D7A4", 
+      color = "#52854C") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
   ylab("Ratings") + 
   xlab("Genres (top 10 rated)") + 
@@ -384,23 +405,32 @@ completeDataByYearOfRelease = rbind(completeDataByYearOfReleaseTop, completeData
 
 plotYearOfRelease <- ggplot()
 
+
 yearOfReleaseRatingsBarPlot <- plotYearOfRelease  + 
   geom_bar(data=completeDataByYearOfRelease,
            aes(x=reorder(yearOfRelease,-n), 
                y=n),
-           stat="identity") +
+           stat="identity",
+      fill = "#c193da", 
+      color = "#916eb2") +
   theme(axis.text.x = element_blank()) + 
   ylab("Number of ratings")+ 
-  xlab("Years (top 10 rated)")
+  xlab("Years of release") +
+  geom_vline(xintercept = 10.5, color="black")+
+  geom_text(aes(x=6, label="Years with most releases",y=600000000000), colour="black", text=element_text(size=11)) +
+  geom_text(aes(x=15, label="Years with least releases",y=600000000000), colour="black", text=element_text(size=11))
 
 YearOfReleaseAvgRatingBoxplot <- plotYearOfRelease + 
   geom_boxplot(
     data=completeDataByYearOfRelease
     ,aes(x=reorder(yearOfRelease,-n),
-         y=rating)) +
+         y=rating),
+      fill = "#c193da", 
+      color = "#916eb2") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
   ylab("Ratings") + 
-  xlab("Years (top 10 rated)")
+  xlab("Years of release")+
+  geom_vline(xintercept = 10.5, color="black")
 
 egg::ggarrange(yearOfReleaseRatingsBarPlot,YearOfReleaseAvgRatingBoxplot, ncol=1)
 
@@ -546,6 +576,7 @@ It seemed the exterior event did not affect the ratings of the users. Consequent
 
 # Methods
 
+This section gathered the method kept for this assignment. The different biases were described, the training and testing sets were created, the tuning parameters determined.
 
 ## Determining the model
 
@@ -589,7 +620,7 @@ movieAvgs <- edx %>%
   group_by(movieId) %>%
   summarize(b_i = mean(rating - mu_rating))
 
-movieAvgs %>% qplot(b_i, geom ="histogram", bins = 10, data = ., color = I("black"))
+movieAvgs %>% qplot(b_i, geom ="histogram", bins = 10, data = ., color = I("#C4961A"), fill= I("#FFDB6D"))
 
 ```
 
@@ -616,7 +647,9 @@ userAvgs <- edx %>%
   group_by(userId) %>%
   summarize(b_u = mean(rating - mu_rating))
 
-userAvgs %>% qplot(b_u, geom ="histogram", bins = 10, data = ., color = I("black"))
+userAvgs %>% qplot(b_u, geom ="histogram", bins = 10, data = .,
+                   fill = I("#56B4E9"), 
+                   color = I("#0072B2"))
 ```
 
 This bias allowed the model to take into account the singularity of each user, not only considering the overall average. The model introduced "cranky" and "lenient" users.
@@ -642,7 +675,11 @@ genreAvgs <- edx %>%
   group_by(genres) %>%
   summarize(b_g = mean(rating - mu_rating))
 
-genreAvgs %>% qplot(b_g, geom ="histogram", bins = 10, data = ., color = I("black"))
+genreAvgs %>% qplot(b_g, 
+                    geom ="histogram", 
+                    bins = 10, data = .,
+                    fill = I("#C3D7A4"),
+                    color = I("#52854C"))
 ```
 
 This bias allowed the model to take into account the singularity of each genre, not only considering the overall average. The model introduced the concept of "popular" and "unpopular" genres.
@@ -744,7 +781,10 @@ functionRmses <- function(lambda){
 
 rmsesRough <- sapply(lambdasRough, functionRmses)
 
-plotRough <- qplot(lambdasRough,rmsesRough)
+plotRough <- qplot(lambdasRough,
+                   rmsesRough,
+                  xlab="Lambda",
+                  ylab="RMSE")
 
 minRoughLambda <- lambdasRough[which.min(rmsesRough)]
 
@@ -752,7 +792,10 @@ lambdasFine <- seq(minRoughLambda-1,minRoughLambda+1,0.1)
 
 rmsesFine <- sapply(lambdasFine, functionRmses)
 
-plotFine <- qplot(lambdasFine,rmsesFine)
+plotFine <- qplot(lambdasFine,
+                  rmsesFine,
+                  xlab="Lambda",
+                  ylab="RMSE")
 
 lambda <- lambdasFine[which.min(rmsesFine)]
 
@@ -762,6 +805,8 @@ ggarrange(plotRough, plotFine, ncol=1)
 The $\lambda$ which minimized the penalized least square equation was : `r lambda`.
 
 # Results
+
+This section applied the previously defined model to the edx and validation datasets. The final RMSE was calculated.
 
 ## Final model
 
@@ -814,6 +859,10 @@ The final RMSE was `r rmse`, which was less than 0.8649, thus the goal had been 
 
 # Conclusion
 
+It was possible to determine a recommendation system with a simple mathematical model using biases. The time required for running the hole algorithm was correct, and the final RMSE was below the required value (0.8649). 
+
+# Openings
+
 Even though the RMSE goal has been reached, the model described here was far from precise. 
 First of all, the predicted ratings were (almost) never "real" values, as 0.5, 1, 1.5, ..., 4.5, 5. They were approximations implying the accuracy ($\frac{\sum(ratingPredictions == ratingValidation)}{nrow(Validation)}$) is equal to 0. It could have been more demonstrative to round the predictions to fit the possible rating values.
 
@@ -847,8 +896,6 @@ Other recommendation systems could have been used, as Single Value Decomposition
 # Sources and references
 
 https://en.wikipedia.org/wiki/Timeline_of_United_States_history_(1990%E2%80%932009)
-
-https://en.wikipedia.org/wiki/Economic_Growth_and_Tax_Relief_Reconciliation_Act_of_2001
 
 https://en.wikipedia.org/wiki/September_11_attacks
 
